@@ -331,7 +331,7 @@ impl MainWindow {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use std::ffi::OsString;
     use std::path::Path;
@@ -339,7 +339,6 @@ mod tests {
     use super::{Found, look, step_label};
 
     #[test]
-    #[cfg(unix)]
     fn finds_pi_where_it_is() {
         use std::os::unix::fs::PermissionsExt as _;
         let dir = tempfile::tempdir().unwrap();
