@@ -9,6 +9,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use gpui_kit::{
     App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, Global, Subscription, Task,
@@ -22,12 +23,28 @@ use crate::ui::AppIcon;
 use crate::ui::download::{Details, Part as DownloadPart, ask_to_download_and_run};
 
 /// How long a scan of this computer takes at least, so its progress can be followed.
-pub const SCAN_TIME: std::time::Duration = std::time::Duration::from_secs(2);
+pub const SCAN_TIME: Duration = Duration::from_secs(2);
+
+/// How full the bar of a scan is `elapsed` into it: full at [`SCAN_TIME`] once the scan
+/// `found` what it looks for. A scan that takes longer slows near the end instead of standing
+/// full.
+pub fn scan_progress(elapsed: Duration, found: bool) -> f32 {
+    let t = elapsed.as_secs_f32() / SCAN_TIME.as_secs_f32();
+    if found || t <= 0.9 {
+        t.min(1.)
+    } else {
+        0.99 - 0.09 * (-(t - 0.9) / 0.5).exp()
+    }
+}
 
 /// What is known of this computer.
 pub enum Scan {
     NotYet,
-    Scanning,
+    /// Since when; `found` once the scan ended, which still shows until [`SCAN_TIME`] passed.
+    Scanning {
+        since: Instant,
+        found: bool,
+    },
     Done {
         hardware: Hardware,
         suggestions: Vec<Suggestion>,
@@ -187,10 +204,13 @@ impl LocalModels {
 
     /// Looks at this computer (again), in the background, and makes the suggestions.
     pub fn scan_now(&mut self, cx: &mut Context<Self>) {
-        if matches!(self.scan, Scan::Scanning) {
+        if matches!(self.scan, Scan::Scanning { .. }) {
             return;
         }
-        self.scan = Scan::Scanning;
+        self.scan = Scan::Scanning {
+            since: Instant::now(),
+            found: false,
+        };
         let root = self.root.clone();
         let env = cx.global::<AppConfig>().child_env.clone();
         // Long enough to see that it looked; a scan is often quicker.
@@ -211,9 +231,15 @@ impl LocalModels {
                     }
                 })
                 .await;
+            let _ = this.update(cx, |this, cx| {
+                if let Scan::Scanning { found, .. } = &mut this.scan {
+                    *found = true;
+                    cx.notify();
+                }
+            });
             shown.await;
             let _ = this.update(cx, |this, cx| {
-                if matches!(this.scan, Scan::Scanning) {
+                if matches!(this.scan, Scan::Scanning { .. }) {
                     this.scan = scan;
                     cx.notify();
                 }
@@ -484,9 +510,12 @@ impl LocalModels {
         cx.notify();
     }
 
-    pub fn cancel(&mut self) {
-        if let Some(job) = &self.job {
+    /// Stops the download at once: it can be started again right away. The thread doing it
+    /// stops at its next step (a stalled connection may hold it a while) and is not heard from.
+    pub fn cancel(&mut self, cx: &mut Context<Self>) {
+        if let Some(job) = self.job.take() {
             job.cancel.store(true, Ordering::Relaxed);
+            cx.notify();
         }
     }
 
@@ -662,5 +691,30 @@ fn details(root: &std::path::Path, choice: &Choice, parts: &[Part]) -> Details {
             choice.engine.license,
             choice.engine.name
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{SCAN_TIME, scan_progress};
+
+    /// The bar fills in the scan's time, from empty, and stands full only once the scan ended.
+    #[test]
+    fn a_scan_fills_its_bar_in_its_time() {
+        let at = |fraction: f32| SCAN_TIME.mul_f32(fraction);
+        assert!(scan_progress(Duration::ZERO, false).abs() < 1e-6);
+        assert!((scan_progress(at(0.5), false) - 0.5).abs() < 1e-6);
+        assert!((scan_progress(at(0.5), true) - 0.5).abs() < 1e-6);
+        assert!((scan_progress(at(1.), true) - 1.).abs() < 1e-6);
+        assert!((scan_progress(at(3.), true) - 1.).abs() < 1e-6);
+        // Still scanning: never full, always moving on.
+        let mut last = 0.;
+        for tenth in 1..100u16 {
+            let now = scan_progress(at(f32::from(tenth) / 10.), false);
+            assert!(now >= last && now < 1., "{tenth}: {now}");
+            last = now;
+        }
     }
 }

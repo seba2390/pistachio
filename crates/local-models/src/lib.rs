@@ -1,7 +1,7 @@
 //! A local model for this computer: what it can run well, and getting it running.
 //!
 //! [`hardware::scan`] looks at the computer (memory, chip, graphics, free disk). [`recommend`]
-//! picks three suggestions from the [`catalog`] (fast, balanced, most capable), each a model plus
+//! picks four suggestions from the [`catalog`] (tiny, fast, balanced, most capable), each a model plus
 //! the engine that runs it best here: a default that installs unattended, and, where one is
 //! faster, a specialized engine that takes more steps (a local build). [`install`] downloads what
 //! a suggestion needs, every file pinned and checked against its SHA-256, and [`Server`] runs it

@@ -158,6 +158,8 @@ pub struct ModelsDialog {
     asked: usize,
     /// What is being asked of servers; a new question replaces it.
     task: Option<Task<()>>,
+    /// Repaints while the hardware scan or a download shows its progress.
+    ticking: Option<Task<()>>,
     _tasks: Vec<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
@@ -253,6 +255,7 @@ impl ModelsDialog {
             checking_thinking: false,
             asked: 0,
             task: None,
+            ticking: None,
             _tasks: Vec::new(),
             _subscriptions: subscriptions,
             place,
@@ -557,6 +560,7 @@ impl Render for ModelsDialog {
             (Some(Ok(_)), Screen::Server(server)) => self.render_server(server, cx),
             (Some(Ok(_)), Screen::Json) => self.render_json(cx),
         };
+        self.keep_moving(cx);
         v_flex()
             .w_full()
             // Text painted by itself ([`FadingText`]) has no color in a dialog otherwise.

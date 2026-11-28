@@ -31,6 +31,38 @@ fn agent() -> ureq::Agent {
         .new_agent()
 }
 
+/// Where downloads come from, asked whether the internet can be reached.
+pub const REACHABLE: [&str; 2] = ["https://huggingface.co", "https://github.com"];
+
+/// Whether any of `urls` answers within `timeout`, with any HTTP status (through the proxy the
+/// environment names, like downloads). They are asked at once.
+pub fn reachable(urls: &[&str], timeout: Duration) -> bool {
+    let (sender, answers) = std::sync::mpsc::channel();
+    for url in urls {
+        let (url, sender) = ((*url).to_owned(), sender.clone());
+        std::thread::spawn(move || {
+            let agent = ureq::Agent::config_builder()
+                .timeout_global(Some(timeout))
+                .http_status_as_error(false)
+                .user_agent("pistachio")
+                .build()
+                .new_agent();
+            let _ = sender.send(agent.head(&url).call().is_ok());
+        });
+    }
+    drop(sender);
+    let deadline = Instant::now() + timeout + Duration::from_secs(1);
+    for _ in urls {
+        let left = deadline.saturating_duration_since(Instant::now());
+        match answers.recv_timeout(left) {
+            Ok(true) => return true,
+            Ok(false) => {}
+            Err(_) => return false,
+        }
+    }
+    false
+}
+
 /// A file to download, and what it must be.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pinned<'a> {
@@ -81,6 +113,11 @@ pub fn download_file(
             }
             Err(error) => return Err(failed(&error)),
         };
+        // A read can wait long on a stalled connection; what it got is not written once the
+        // download was cancelled meanwhile, as it may have been started again.
+        if cancel.load(Ordering::Relaxed) {
+            return Err(InstallError::Cancelled);
+        }
         out.write_all(&buffer[..n])
             .map_err(|error| failed(&error))?;
         hasher.update(&buffer[..n]);
@@ -132,6 +169,9 @@ pub fn download_tar(
             return Err(InstallError::Cancelled);
         }
         let n = reader.read(&mut buffer).map_err(|error| failed(&error))?;
+        if cancel.load(Ordering::Relaxed) {
+            return Err(InstallError::Cancelled);
+        }
         if n == 0 {
             break;
         }
@@ -275,6 +315,20 @@ mod tests {
             let error = download(archive.clone(), &sha256(b"other"), of).unwrap_err();
             assert!(error.to_string().contains("checksum"), "{error}");
         }
+    }
+
+    #[test]
+    fn reachable_is_any_answer() {
+        let timeout = Duration::from_secs(5);
+        // Nothing listens on a port that was just freed.
+        let closed = {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}", listener.local_addr().unwrap())
+        };
+        assert!(!reachable(&[&closed], timeout));
+        assert!(!reachable(&[], timeout));
+        let open = serve(Vec::new());
+        assert!(reachable(&[&closed, &open], timeout));
     }
 
     #[test]

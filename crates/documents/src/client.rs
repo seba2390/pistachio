@@ -2,7 +2,7 @@
 
 use std::io::{Read as _, Write as _};
 use std::path::Path;
-use std::process::{ChildStdin, Command, Stdio};
+use std::process::{ChildStdin, Stdio};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use serde_json::Value;
@@ -44,7 +44,7 @@ impl Drop for Stop {
 /// Reads the document at `path` with the settings in `dir`, running `exe` as the helper. Blocks
 /// until it is done or `stopped`.
 pub fn read(exe: &Path, dir: &Path, path: &Path, stopped: &Stopped) -> Result<Reply, String> {
-    let mut child = Command::new(exe)
+    let mut child = platform::command(exe)
         .args([FLAG, WATCHED])
         .env(DIR_ENV, dir)
         .stdin(Stdio::piped())

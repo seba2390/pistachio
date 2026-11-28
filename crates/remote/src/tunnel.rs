@@ -134,7 +134,7 @@ impl Ssh {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        no_console(&mut command);
+        platform::NoWindow::no_window(&mut command);
         // Ended by `Drop` when this fails.
         let mut tunnel = Tunnel {
             child: command.spawn()?,
@@ -236,18 +236,6 @@ fn read_lines(
             bytes.clear();
         }
     });
-}
-
-/// Keeps Windows from opening a console window for a program that runs in the background.
-pub fn no_console(command: &mut Command) {
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt as _;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-    #[cfg(not(windows))]
-    let _ = command;
 }
 
 #[cfg(test)]

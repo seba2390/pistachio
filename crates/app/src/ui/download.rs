@@ -128,9 +128,10 @@ pub fn download_label(size: u64) -> String {
     format!("Download {}", size_label(size))
 }
 
-/// The button in a list that downloads `name`, after asking.
-pub fn download_button(id: impl Into<SharedString>, name: &str, size: u64) -> Button {
-    labeled_button(id, name, download_label(size))
+/// The button in a list that downloads `name`, after asking; "No internet" while the internet
+/// cannot be reached, where a click asks again.
+pub fn download_button(id: impl Into<SharedString>, name: &str, size: u64, cx: &App) -> Button {
+    labeled_button(id, name, download_label(size), cx)
 }
 
 /// What a button that downloads `size` bytes and then runs what it got says.
@@ -138,18 +139,60 @@ pub fn download_and_run_label(size: u64) -> String {
     format!("Download and run {}", size_label(size))
 }
 
-/// The button in a list that downloads `name` and runs it, after asking.
-pub fn download_and_run_button(id: impl Into<SharedString>, name: &str, size: u64) -> Button {
-    labeled_button(id, name, download_and_run_label(size))
+/// The button in a list that downloads `name` and runs it, after asking; "No internet" while the
+/// internet cannot be reached.
+pub fn download_and_run_button(
+    id: impl Into<SharedString>,
+    name: &str,
+    size: u64,
+    cx: &App,
+) -> Button {
+    labeled_button(id, name, download_and_run_label(size), cx)
 }
 
-fn labeled_button(id: impl Into<SharedString>, name: &str, label: String) -> Button {
-    Button::new(id.into())
-        .icon(AppIcon::Download)
-        .accessibility_label(format!("{label}, {name}"))
-        .label(label)
-        .outline()
-        .xsmall()
+fn labeled_button(id: impl Into<SharedString>, name: &str, label: String, cx: &App) -> Button {
+    offline_aware(
+        Button::new(id.into())
+            .icon(AppIcon::Download)
+            .accessibility_label(format!("{label}, {name}"))
+            .label(label),
+        cx,
+    )
+    .outline()
+    .xsmall()
+}
+
+/// `button`, which downloads, saying "No internet" while the internet cannot be reached. Its click
+/// still goes through [`crate::online::when_online`], which asks again.
+pub fn offline_aware(button: Button, cx: &App) -> Button {
+    if crate::online::is_offline(cx) {
+        button
+            .icon(AppIcon::WifiOff)
+            .label(crate::online::OFFLINE_LABEL)
+            .accessibility_label(format!(
+                "{}: nothing can be downloaded. Check again",
+                crate::online::OFFLINE_LABEL
+            ))
+            .tooltip(crate::online::OFFLINE_NOTE)
+    } else {
+        button
+    }
+}
+
+/// A thin bar `fraction` full.
+pub fn progress_bar(fraction: f32, cx: &App) -> Div {
+    div()
+        .w_full()
+        .h(px(6.))
+        .rounded_full()
+        .bg(cx.theme().border)
+        .child(
+            div()
+                .h_full()
+                .rounded_full()
+                .bg(palette(cx).accent)
+                .w(gpui_kit::relative(fraction.clamp(0., 1.))),
+        )
 }
 
 /// Asks whether to download `name`, showing what that is; `start` is called on a yes.
@@ -200,6 +243,20 @@ fn ask(
     cx: &mut App,
 ) {
     let title: SharedString = title.into();
+    // Asked only while the internet can be reached.
+    crate::online::when_online(window, cx, move |window, cx| {
+        open(title, label, details, start, window, cx);
+    });
+}
+
+fn open(
+    title: SharedString,
+    label: String,
+    details: Details,
+    start: impl Fn(&mut App) + Clone + 'static,
+    window: &mut Window,
+    cx: &mut App,
+) {
     open_form_dialog(None, window, cx, move |dialog, _, cx| {
         let start = start.clone();
         dialog
@@ -219,14 +276,20 @@ fn ask(
                             .on_click(|_, window, cx| window.close_dialog(cx)),
                     )
                     .child(
-                        Button::new("download-start")
-                            .form_action(cx)
-                            .icon(AppIcon::Download)
-                            .label(label.clone())
-                            .on_click(move |_, window, cx| {
+                        offline_aware(
+                            Button::new("download-start")
+                                .form_action(cx)
+                                .icon(AppIcon::Download)
+                                .label(label.clone()),
+                            cx,
+                        )
+                        .on_click(move |_, window, cx| {
+                            let start = start.clone();
+                            crate::online::when_online(window, cx, move |window, cx| {
                                 window.close_dialog(cx);
                                 start(cx);
-                            }),
+                            });
+                        }),
                     ),
             )
     });
@@ -278,6 +341,7 @@ mod tests {
                 let start = move |_: &mut _| started_by.set(started_by.get() + 1);
                 ask_to_download("Model", details, start, window, cx);
             });
+            cx.run_until_parked();
             draw(cx);
             assert!(is_open(cx));
             match answer {
@@ -285,6 +349,7 @@ mod tests {
                 "escape" => press("escape", cx),
                 _ => click("download-start", cx),
             }
+            cx.run_until_parked();
             assert!(!is_open(cx), "{answer}");
             assert_eq!(started.get(), times, "{answer}");
         }

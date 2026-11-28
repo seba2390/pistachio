@@ -36,6 +36,7 @@ pub struct DownloadDialog {
 
 impl Render for DownloadDialog {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        crate::online::refresh(cx);
         let muted = cx.theme().muted_foreground;
         let rows: Vec<AnyElement> = MODELS
             .iter()
@@ -72,14 +73,19 @@ impl Render for DownloadDialog {
                             .on_click(|_, window, cx| window.close_dialog(cx)),
                     )
                     .child(
-                        Button::new("speech-download-start")
-                            .icon(AppIcon::Download)
-                            .label(download_label(selected.size()))
-                            .primary()
-                            .on_click(move |_, window, cx| {
+                        download::offline_aware(
+                            Button::new("speech-download-start")
+                                .icon(AppIcon::Download)
+                                .label(download_label(selected.size())),
+                            cx,
+                        )
+                        .primary()
+                        .on_click(move |_, window, cx| {
+                            crate::online::when_online(window, cx, move |window, cx| {
                                 start_download(selected, cx);
                                 window.close_dialog(cx);
-                            }),
+                            });
+                        }),
                     ),
             )
     }
@@ -364,10 +370,15 @@ pub fn settings_model_rows(cx: &App) -> AnyElement {
                     )
                     .into_any_element()
             } else {
-                download_button(format!("speech-get-{}", model.id), model.name, model.size())
-                    .disabled(downloading.is_some())
-                    .on_click(move |_, window, cx| ask_to_download(model, window, cx))
-                    .into_any_element()
+                download_button(
+                    format!("speech-get-{}", model.id),
+                    model.name,
+                    model.size(),
+                    cx,
+                )
+                .disabled(downloading.is_some())
+                .on_click(move |_, window, cx| ask_to_download(model, window, cx))
+                .into_any_element()
             };
             h_flex()
                 .w_full()

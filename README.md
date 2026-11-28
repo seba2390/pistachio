@@ -31,7 +31,7 @@ turn more on in [Settings → Tools](https://seba2390.github.io/pistachio/settin
 - **Chat and Code.** Plain chats that can't touch your files, or the agent working in a project
   folder, with a terminal, git changes and a file tree beside it.
 - **Local models in one click.** Pistachio scans your computer's hardware and suggests models
-  that run well on it (Fast, Balanced, Most capable), each with the inference engine that runs it
+  that run well on it (Tiny, Fast, Balanced, Most capable), each with the inference engine that runs it
   best there. One click downloads, verifies and runs it, ready for your chats.
 - **SSH remotes.** Run pi on another machine. Pistachio installs pi there if needed, and your
   models work there with the keys kept on your computer.
@@ -60,6 +60,9 @@ https://github.com/user-attachments/assets/45a10dcc-881a-451d-a78e-cefb881ec8d0
 ```bash
 npm i -g @earendil-works/pi-coding-agent
 ```
+
+Or skip this step: when Pistachio doesn't find pi, it offers **Install pi**, which installs it
+(with its own Node.js if needed) into `~/.pistachio/server`, without administrator rights.
 
 **2. Install Pistachio**
 
@@ -90,25 +93,28 @@ npm i -g @earendil-works/pi-coding-agent
   - Debian, Ubuntu:
 
     ```bash
-    curl -fLO https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio_0.6.0-1_$(dpkg --print-architecture).deb && sudo apt install ./pistachio_0.6.0-1_$(dpkg --print-architecture).deb
+    curl -fLO https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio_0.6.1-1_$(dpkg --print-architecture).deb && sudo apt install ./pistachio_0.6.1-1_$(dpkg --print-architecture).deb
     ```
 
   - Fedora and other RPM-based systems:
 
     ```bash
-    sudo dnf install https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio-0.6.0-1.$(uname -m).rpm
+    sudo dnf install https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio-0.6.1-1.$(uname -m).rpm
     ```
 
   - Any other distribution (installs for your user only, no root, and adds "Pistachio" to your
     app launcher):
 
     ```bash
-    curl -fL https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio-v0.6.0-linux-$(uname -m).tar.gz | tar xz && pistachio-v0.6.0-linux-$(uname -m)/install.sh
+    curl -fL https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio-v0.6.1-linux-$(uname -m).tar.gz | tar xz && pistachio-v0.6.1-linux-$(uname -m)/install.sh
     ```
 
   Or download the files yourself from [Releases](https://github.com/seba2390/pistachio/releases).
-- **Windows (x86_64, experimental):** download `pistachio-…-windows-x86_64.zip` from
-  [Releases](https://github.com/seba2390/pistachio/releases), unzip it and run `pistachio.exe`.
+- **Windows (x86_64, experimental):** download `Pistachio-…-windows-x86_64-setup.exe` from
+  [Releases](https://github.com/seba2390/pistachio/releases) and run it. It installs for your
+  user (no administrator rights), adds Pistachio to the Start menu and uninstalls from Settings →
+  Apps. The `pistachio-…-windows-x86_64.zip` holds the same `pistachio.exe` to run without
+  installing.
   - Windows may warn about an unknown publisher the first time (More info → Run anyway).
   - SSH remotes are untested on Windows.
 - **From source** (any platform, needs [Rust](https://rustup.rs)):
@@ -119,8 +125,9 @@ npm i -g @earendil-works/pi-coding-agent
 
   Linux also needs the GPUI system libraries listed in [CONTRIBUTING.md](CONTRIBUTING.md#setup).
 
-Then launch **Pistachio** (or run `pistachio`). If pi isn't on your `PATH`, point to it with
-`PISTACHIO_PI_BIN=/path/to/pi`.
+Then launch **Pistachio** (or run `pistachio`). It looks for pi on your `PATH` and where npm
+and Node.js version managers (nvm, fnm, Volta, …) put it; if it finds none, it offers **Install
+pi** or **Find pi…**. `PISTACHIO_PI_BIN=/path/to/pi` chooses one yourself.
 
 ## Usage
 

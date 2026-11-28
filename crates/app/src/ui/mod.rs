@@ -16,6 +16,7 @@ mod message_scroller;
 mod pi_field;
 pub mod spinner;
 mod text;
+pub mod window_controls;
 
 pub use button::{QuietButton, buttons};
 pub use copy_button::CopyButton;

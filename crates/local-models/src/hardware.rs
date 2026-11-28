@@ -1,12 +1,16 @@
 //! What the computer has: memory, chip, graphics card, free disk and build tools.
 //!
-//! Read with the system's own tools (`sysctl`, `/proc`, `nvidia-smi`, `df`, PowerShell), each
-//! with a short time limit; whatever cannot be read is left out, never guessed as more.
+//! Read with the system's own tools (`sysctl`, `/proc`, `nvidia-smi`, `df`), each with a short
+//! time limit, and on Windows from its own APIs (no PowerShell: it was slow to start, often past
+//! the time limit, and opened windows); whatever cannot be read is left out, never guessed as
+//! more.
 
 use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
+
+use platform::NoWindow as _;
 
 const GB: f64 = 1e9;
 
@@ -386,18 +390,72 @@ pub fn scan(models_dir: &Path, path: Option<&OsStr>) -> Hardware {
             hardware.gpu = nvidia_gpu();
         }
         Os::Windows => {
-            let ps = |script: &str| output("powershell", &["-NoProfile", "-Command", script]);
-            hardware.cpu = ps("(Get-CimInstance Win32_Processor).Name").unwrap_or_default();
-            hardware.ram = ps("(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory")
-                .and_then(|text| text.trim().parse().ok())
-                .unwrap_or_default();
-            hardware.avx512 = ps("[System.Runtime.Intrinsics.X86.Avx512F]::IsSupported")
-                .is_some_and(|text| text.trim() == "True");
-            hardware.gpu = nvidia_gpu();
+            #[cfg(windows)]
+            {
+                use platform::windows;
+                hardware.cpu = windows::processor_name().unwrap_or_default();
+                hardware.ram = windows::total_memory().unwrap_or_default();
+                let adapters: Vec<_> = windows::graphics_adapters()
+                    .into_iter()
+                    .map(|a| (a.name, a.vendor_id, a.dedicated_memory))
+                    .collect();
+                // nvidia-smi knows an NVIDIA card's memory best; DirectX lists every card.
+                hardware.gpu = nvidia_gpu().or_else(|| pick_adapter(&adapters));
+            }
         }
+    }
+    #[cfg(target_arch = "x86_64")]
+    {
+        hardware.avx512 |= std::arch::is_x86_feature_detected!("avx512f");
     }
     hardware.free_disk = free_space(models_dir);
     hardware
+}
+
+/// Memory a graphics card needs of its own to be worth running models on.
+const MIN_VRAM: u64 = 2_000_000_000;
+
+/// The card to run models on from Windows' list of graphics adapters (name, PCI vendor, bytes
+/// of memory of its own): the one with the most memory, leaving out graphics built into the
+/// processor (which use the system's memory, like the processor itself).
+pub fn pick_adapter(adapters: &[(String, u32, u64)]) -> Option<Gpu> {
+    adapters
+        .iter()
+        .filter(|(name, _, vram)| *vram >= MIN_VRAM && !is_integrated(name))
+        .filter_map(|(name, vendor, vram)| {
+            let vendor = match vendor {
+                0x10DE => Vendor::Nvidia,
+                0x1002 | 0x1022 => Vendor::Amd,
+                0x8086 => Vendor::Intel,
+                _ => return None,
+            };
+            Some(Gpu {
+                name: name.clone(),
+                vendor,
+                vram: *vram,
+            })
+        })
+        .max_by_key(|gpu| gpu.vram)
+}
+
+/// Whether an adapter's name is that of graphics built into the processor ("AMD Radeon(TM)
+/// Graphics", "AMD Radeon 780M Graphics", "Intel(R) UHD Graphics", "Intel(R) Arc(TM)
+/// Graphics"), which may still report memory set aside for it.
+pub fn is_integrated(name: &str) -> bool {
+    let name = name.to_lowercase();
+    let discrete_intel = name.contains("arc")
+        && name.split_whitespace().any(|word| {
+            let mut chars = word.chars();
+            matches!(chars.next(), Some('a' | 'b'))
+                && chars.as_str().len() == 3
+                && chars.as_str().chars().all(|c| c.is_ascii_digit())
+        });
+    let discrete = name.contains("rx ")
+        || name.contains("radeon pro")
+        || name.contains("radeon vii")
+        || name.contains("nvidia")
+        || discrete_intel;
+    !discrete && (name.contains("graphics") || name.contains("uhd") || name.contains("iris"))
 }
 
 fn nvidia_gpu() -> Option<Gpu> {
@@ -415,11 +473,15 @@ fn nvidia_gpu() -> Option<Gpu> {
 /// Free bytes on the disk `dir` is on (or would be on).
 fn free_space(dir: &Path) -> Option<u64> {
     let existing = dir.ancestors().find(|path| path.exists())?;
-    if cfg!(windows) {
-        return None;
+    #[cfg(windows)]
+    {
+        platform::windows::free_disk(existing)
     }
-    let text = output("df", &["-k", &existing.to_string_lossy()])?;
-    parse_df(&text)
+    #[cfg(not(windows))]
+    {
+        let text = output("df", &["-k", &existing.to_string_lossy()])?;
+        parse_df(&text)
+    }
 }
 
 fn on_path(tool: &str, path: Option<&OsStr>) -> bool {
@@ -438,6 +500,7 @@ fn on_path(tool: &str, path: Option<&OsStr>) -> bool {
 /// What `program` prints, if it runs within a few seconds and succeeds.
 fn output(program: &str, args: &[&str]) -> Option<String> {
     let mut child = Command::new(program)
+        .no_window()
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -566,6 +629,34 @@ mod tests {
         assert_eq!(gpu_bandwidth(&gpu), 256.);
         let df = "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/disk3s5 971350180 500000000 400000000 56% /";
         assert_eq!(parse_df(df), Some(409_600_000_000));
+    }
+
+    #[test]
+    fn picks_a_windows_graphics_card() {
+        let gb = 1_000_000_000;
+        let adapters = |list: &[(&str, u32, u64)]| -> Vec<(String, u32, u64)> {
+            list.iter()
+                .map(|(name, vendor, vram)| ((*name).to_owned(), *vendor, *vram))
+                .collect()
+        };
+        let laptop = adapters(&[
+            ("AMD Radeon(TM) Graphics", 0x1002, 2 * gb),
+            ("NVIDIA GeForce RTX 4060 Laptop GPU", 0x10DE, 8 * gb),
+        ]);
+        let gpu = pick_adapter(&laptop).unwrap();
+        assert_eq!((gpu.vendor, gpu.vram), (Vendor::Nvidia, 8 * gb));
+        let desktop = adapters(&[("AMD Radeon RX 7800 XT", 0x1002, 16 * gb)]);
+        assert_eq!(pick_adapter(&desktop).unwrap().vendor, Vendor::Amd);
+        let arc = adapters(&[("Intel(R) Arc(TM) B580 Graphics", 0x8086, 12 * gb)]);
+        assert_eq!(pick_adapter(&arc).unwrap().vendor, Vendor::Intel);
+        // Graphics in the processor use the system's memory: the processor runs the model.
+        let thin = adapters(&[
+            ("AMD Radeon 780M Graphics", 0x1002, 4 * gb),
+            ("Intel(R) UHD Graphics 620", 0x8086, gb / 8),
+            ("Intel(R) Arc(TM) Graphics", 0x8086, 2 * gb),
+            ("Microsoft Basic Render Driver", 0x1414, 0),
+        ]);
+        assert_eq!(pick_adapter(&thin), None);
     }
 
     #[test]

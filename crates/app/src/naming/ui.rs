@@ -186,10 +186,15 @@ pub fn settings_model_rows(cx: &App) -> AnyElement {
                     )
                     .into_any_element()
             } else {
-                download_button(format!("naming-get-{}", model.id), model.name, model.size())
-                    .disabled(downloading.is_some())
-                    .on_click(move |_, window, cx| ask_to_download(model, window, cx))
-                    .into_any_element()
+                download_button(
+                    format!("naming-get-{}", model.id),
+                    model.name,
+                    model.size(),
+                    cx,
+                )
+                .disabled(downloading.is_some())
+                .on_click(move |_, window, cx| ask_to_download(model, window, cx))
+                .into_any_element()
             };
             h_flex()
                 .w_full()

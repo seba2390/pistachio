@@ -9,7 +9,7 @@
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-use gpui_kit::component::Icon;
+use gpui_kit::component::{Icon, IconName};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use serde::{Deserialize, Serialize};
@@ -289,6 +289,17 @@ fn indicator_at(style: IndicatorStyle, seconds: f32, size: Pixels, color: Hsla) 
                 ),
         )
         .children(frame.dots.iter().filter(|d| !d.behind).map(dot))
+}
+
+/// A loader turning, as it is now, for something being waited on (a scan, a download). It turns
+/// also with reduced motion: the wait is real, and a still loader looks stuck. Views showing it
+/// repaint every [`FRAME`] while they wait.
+pub fn turning_loader(color: Hsla) -> Icon {
+    const LAP: f32 = 0.8;
+    let turn = TAU * ease_in_out_cubic((clock() / LAP).fract());
+    Icon::new(IconName::Loader)
+        .text_color(color)
+        .transform(Transformation::rotate(radians(turn)))
 }
 
 /// A ring with an arc going round it, as it is now: something is being read. Views showing it

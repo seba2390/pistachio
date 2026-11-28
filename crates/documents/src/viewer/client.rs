@@ -2,7 +2,7 @@
 
 use std::io::{BufRead as _, BufReader, Read as _, Write as _};
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, Stdio};
 
 use super::serve::{Answer, COMMAND};
 use super::{PageRequest, Picture, Size};
@@ -60,7 +60,7 @@ struct Helper {
 
 impl Helper {
     fn start(exe: &Path, path: &Path) -> Result<(Self, Vec<Size>), String> {
-        let mut child = Command::new(exe)
+        let mut child = platform::command(exe)
             .args([FLAG, COMMAND])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

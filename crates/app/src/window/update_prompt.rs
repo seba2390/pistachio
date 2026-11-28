@@ -20,6 +20,8 @@ pub(super) enum Prompt {
         install: Result<Install, SharedString>,
         state: UpdateState,
     },
+    /// pi is not on this computer: install it, or point at it (see [`super::pi_setup`]).
+    PiMissing { state: pi_setup::PiState },
     /// What changed since the version that ran before this one.
     WhatsNew {
         version: SharedString,
@@ -112,7 +114,12 @@ impl MainWindow {
 
     /// Shows `prompt` over the window, once a blurred picture of the window is ready to go
     /// behind it.
-    fn show_prompt(&mut self, prompt: Prompt, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn show_prompt(
+        &mut self,
+        prompt: Prompt,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let replacing = self.update_prompt.is_some();
         self.update_prompt = Some(prompt);
         // Escape reaches the window, not a message box behind the card.
@@ -167,14 +174,18 @@ impl MainWindow {
         .detach();
     }
 
-    /// Closes the card, unless an update is being installed.
-    fn dismiss_update_prompt(&mut self, cx: &mut Context<Self>) {
+    /// Closes the card, unless an update or pi is being installed.
+    pub(super) fn dismiss_update_prompt(&mut self, cx: &mut Context<Self>) {
         let working = matches!(
             self.update_prompt,
-            Some(Prompt::Update {
-                state: UpdateState::Working(_),
-                ..
-            })
+            Some(
+                Prompt::Update {
+                    state: UpdateState::Working(_),
+                    ..
+                } | Prompt::PiMissing {
+                    state: pi_setup::PiState::Working(_)
+                }
+            )
         );
         if !working && self.update_prompt.take().is_some() {
             if let Backdrop::Blurred(image) =
@@ -298,6 +309,7 @@ impl MainWindow {
                 install,
                 state,
             } => self.render_update_offer(release, install, state, cx),
+            Prompt::PiMissing { state } => self.render_pi_missing(state, cx),
             Prompt::WhatsNew {
                 version,
                 from,
@@ -379,13 +391,21 @@ impl MainWindow {
             .unwrap_or_else(|| release.page_url.clone());
         let version = release.version.clone();
         let failed = matches!(state, UpdateState::Failed(_));
+        crate::online::refresh(cx);
         let primary = match install {
-            Ok(_) => Button::new("update-now")
-                .primary()
-                .label(if failed { "Try again" } else { "Update" })
-                .loading(working)
-                .disabled(working)
-                .on_click(cx.listener(|this, _, _, cx| this.start_update(cx))),
+            Ok(_) => crate::ui::download::offline_aware(
+                Button::new("update-now").label(if failed { "Try again" } else { "Update" }),
+                cx,
+            )
+            .primary()
+            .loading(working)
+            .disabled(working)
+            .on_click(cx.listener(|_, _, window, cx| {
+                let this = cx.weak_entity();
+                crate::online::when_online(window, cx, move |_, cx| {
+                    let _ = this.update(cx, |this, cx| this.start_update(cx));
+                });
+            })),
             Err(_) => Button::new("update-download")
                 .primary()
                 .label("Download")
@@ -533,7 +553,7 @@ fn render_whats_new(
 }
 
 /// Icon badge, title and a muted line under it.
-fn header(
+pub(super) fn header(
     icon: AppIcon,
     title: String,
     detail: String,
@@ -592,7 +612,7 @@ fn progress_bar(step: &Step) -> Bar {
 }
 
 /// A progress bar and what is happening.
-fn render_progress(step: &Step, accent: Hsla, track: Hsla, muted: Hsla) -> AnyElement {
+pub(super) fn render_progress(step: &Step, accent: Hsla, track: Hsla, muted: Hsla) -> AnyElement {
     let label = match step {
         Step::Downloading { received, total } if *total > 0 => format!(
             "Downloading… {} of {}",

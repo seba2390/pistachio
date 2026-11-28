@@ -15,8 +15,9 @@ const INSTALL_TIMEOUT: Duration = Duration::from_mins(15);
 
 const INSTALL_SCRIPT: &str = include_str!("scripts/install-pi.sh");
 
-/// The installer script with its login-`PATH` prelude filled in.
-pub(crate) fn install_script() -> String {
+/// The installer script with its login-`PATH` prelude filled in: POSIX `sh` that installs pi into
+/// `~/.pistachio/server` (also run on this computer by the `pi-install` crate).
+pub fn install_script() -> String {
     INSTALL_SCRIPT.replace("LOGIN_PATH", LOGIN_PATH)
 }
 

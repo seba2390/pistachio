@@ -38,9 +38,9 @@ pub use config::{
 };
 pub use error::{RemoteError, classify};
 pub use host::{HostId, HostStore, SavedHost, Target};
+pub use install::install_script;
 pub use link::{Endpoint, MANAGED_AGENT_DIR, RelayProof};
 pub use sessions::SessionIndex;
 pub use ssh::{
     DirListing, LEGACY_MANAGED_DIR, MANAGED_DIR, Probe, RELAY_PORT_ENV, Ssh, remote_word, sh_quote,
 };
-pub use tunnel::no_console;

@@ -26,7 +26,11 @@ pub(super) fn page() -> SettingPage {
              the web, and those that pi reads in Code sessions on this computer.",
         )
         .group(SettingGroup::new().title("Parser").item(
-            SettingItem::render(|_, _, cx| rows(cx)).keywords([
+            SettingItem::render(|_, _, cx| {
+                crate::online::refresh(cx);
+                rows(cx)
+            })
+            .keywords([
                 "PDF",
                 "Word",
                 "Excel",
@@ -116,9 +120,9 @@ impl Action {
             Self::Use => {
                 document_parsers(cx).update(cx, |parsers, cx| parsers.choose(parser, cx));
             }
-            Self::Update => {
+            Self::Update => crate::online::when_online(window, cx, move |_, cx| {
                 document_parsers(cx).update(cx, |parsers, cx| parsers.install(parser, cx));
-            }
+            }),
             Self::Cancel => {
                 document_parsers(cx).update(cx, |parsers, _| parsers.cancel_download());
             }
@@ -224,8 +228,15 @@ fn row(parser: Parser, state: State, busy: bool, cx: &App) -> Div {
         let id = SharedString::from(format!("parser-{}-{}", action.id(), parser.id()));
         let button = match (action, parser.download()) {
             (Action::Download, Ok(download)) => {
-                download_button(id, parser.label(), download.size())
+                download_button(id, parser.label(), download.size(), cx)
             }
+            (Action::Update, _) => download::offline_aware(
+                Button::new(id)
+                    .label(action.label())
+                    .accessibility_label(format!("{} {}", action.label(), parser.label())),
+                cx,
+            )
+            .xsmall(),
             _ => Button::new(id)
                 .label(action.label())
                 .accessibility_label(format!("{} {}", action.label(), parser.label()))

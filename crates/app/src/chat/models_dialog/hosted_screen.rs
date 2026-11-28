@@ -4,7 +4,6 @@
 
 use gpui_kit::component::button::{Button, ButtonVariants as _};
 use gpui_kit::component::input::Input;
-use gpui_kit::component::spinner::Spinner;
 use gpui_kit::component::{
     ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _, h_flex, v_flex,
 };
@@ -15,8 +14,10 @@ use pi_config::server::{self, KNOWN_SERVERS, Kind, KnownServer, Lookup, THIS_DEV
 use super::start_screen::{Back, available, grid};
 use super::{ModelsDialog, card, label, probe};
 use crate::local_models::{LocalModels, Scan as Machine, Status};
+use crate::model_store::size_label;
 use crate::pi_place::PiPlace;
-use crate::ui::download::download_and_run_button;
+use crate::ui::download::{download_and_run_button, progress_bar};
+use crate::ui::spinner::{FRAME, turning_loader};
 use crate::ui::{AppIcon, FadingText, QuietButton as _, web_link};
 use local_models::hardware::Fact;
 use local_models::{Choice, Suggestion};
@@ -106,6 +107,46 @@ impl ModelsDialog {
             models.update(cx, LocalModels::scan_now);
         }
         cx.notify();
+    }
+
+    /// Whether something on the page moves: the hardware scan, or a suggestion downloading.
+    fn moving(&self, cx: &App) -> bool {
+        let on_page = matches!(self.screen, super::Screen::Hosted)
+            && self.device == Some(Device::This)
+            && self.this_way == Some(Way::Deploy);
+        let Some(models) = crate::local_models::local_models(cx).filter(|_| on_page) else {
+            return false;
+        };
+        let models = models.read(cx);
+        let scanning =
+            self.deploy != DeployStep::Start && matches!(models.scan(), Machine::Scanning { .. });
+        scanning || models.is_busy()
+    }
+
+    /// Repaints every [`FRAME`] while something on the page moves, and not otherwise. Driven by
+    /// the clock rather than GPUI's animations, which stand still with reduced motion: these
+    /// are waits the user follows.
+    pub(super) fn keep_moving(&mut self, cx: &mut Context<Self>) {
+        if self.ticking.is_some() || !self.moving(cx) {
+            return;
+        }
+        self.ticking = Some(cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(FRAME).await;
+                let moving = this.update(cx, |this, cx| {
+                    let moving = this.moving(cx);
+                    if moving {
+                        cx.notify();
+                    } else {
+                        this.ticking = None;
+                    }
+                    moving
+                });
+                if !moving.unwrap_or(false) {
+                    break;
+                }
+            }
+        }));
     }
 
     fn scan_of(&mut self, device: Device) -> &mut Option<Scan> {
@@ -414,9 +455,9 @@ impl ModelsDialog {
         // What the app scanned before shows only once asked for here.
         let asked = self.deploy != DeployStep::Start;
         let (scanning, facts) = match models.read(cx).scan() {
-            Machine::Scanning => (asked, None),
-            Machine::Done { hardware, .. } if asked => (false, Some(hardware.facts())),
-            Machine::NotYet | Machine::Done { .. } => (false, None),
+            Machine::Scanning { since, found } if asked => (Some((*since, *found)), None),
+            Machine::Done { hardware, .. } if asked => (None, Some(hardware.facts())),
+            Machine::NotYet | Machine::Scanning { .. } | Machine::Done { .. } => (None, None),
         };
         let accent = crate::theme::palette(cx).accent_icon;
         let scan_button = div()
@@ -434,13 +475,13 @@ impl ModelsDialog {
                     })
                     .when(facts.is_some(), |button| button.outline().xsmall())
                     .when(facts.is_none(), |button| button.form_other(cx))
-                    .disabled(scanning)
+                    .disabled(scanning.is_some())
                     .on_click(cx.listener(|this, _, _, cx| this.scan_hardware(cx))),
             );
         let facts_found = facts.is_some();
-        let hardware: AnyElement = match facts {
-            _ if scanning => self.render_scanning(cx),
-            None => v_flex()
+        let hardware: AnyElement = match (scanning, facts) {
+            (Some((since, found)), _) => render_scanning(since, found, cx),
+            (None, None) => v_flex()
                 .gap_3()
                 .child(label(
                     "Pistachio looks at this device's processor, memory, graphics and free \
@@ -449,7 +490,7 @@ impl ModelsDialog {
                 ))
                 .child(h_flex().w_full().justify_center().child(scan_button))
                 .into_any_element(),
-            Some(facts) => v_flex()
+            (None, Some(facts)) => v_flex()
                 .gap_1p5()
                 .child(
                     h_flex()
@@ -493,67 +534,8 @@ impl ModelsDialog {
             .into_any_element()
     }
 
-    /// A bar that fills while the hardware is scanned, saying what is looked at.
-    fn render_scanning(&self, cx: &mut Context<Self>) -> AnyElement {
-        const STEPS: [&str; 5] = [
-            "Reading the processor…",
-            "Measuring the memory…",
-            "Looking for graphics…",
-            "Checking the free disk…",
-            "Looking for build tools…",
-        ];
-        let theme = cx.theme();
-        let (track, muted) = (theme.border, theme.muted_foreground);
-        let fill = crate::theme::palette(cx).accent;
-        v_flex()
-            .debug_selector(|| "scanning-hardware".into())
-            .w_full()
-            .gap_2()
-            .px_3()
-            .py_3()
-            .rounded_lg()
-            .border_1()
-            .border_color(track)
-            .child(div().w_full().with_animation(
-                ("scan-progress", self.scans),
-                Animation::new(crate::local_models::SCAN_TIME),
-                move |this, delta| {
-                    #[allow(
-                        clippy::cast_possible_truncation,
-                        clippy::cast_sign_loss,
-                        clippy::cast_precision_loss
-                    )]
-                    let step = ((delta * STEPS.len() as f32) as usize).min(STEPS.len() - 1);
-                    this.child(
-                        v_flex()
-                            .w_full()
-                            .gap_2()
-                            .child(
-                                h_flex()
-                                    .w_full()
-                                    .gap_2()
-                                    .text_xs()
-                                    .child(Spinner::new().small().color(fill))
-                                    .child(div().flex_1().child(STEPS[step]))
-                                    .child(
-                                        div()
-                                            .text_color(muted)
-                                            .child(format!("{:.0}%", delta * 100.)),
-                                    ),
-                            )
-                            .child(
-                                div().w_full().h(px(6.)).rounded_full().bg(track).child(
-                                    div().h_full().w(relative(delta)).rounded_full().bg(fill),
-                                ),
-                            ),
-                    )
-                },
-            ))
-            .into_any_element()
-    }
-
-    /// Three models for this computer (fast, balanced, most capable), each with the engine that
-    /// runs it best here and, where one is faster, a specialized engine.
+    /// Four models for this computer (tiny, fast, balanced, most capable), each with the engine
+    /// that runs it best here and, where one is faster, a specialized engine.
     fn render_suggestions(
         &self,
         models: &Entity<LocalModels>,
@@ -562,7 +544,7 @@ impl ModelsDialog {
         let (picks, busy, error) = {
             let state = models.read(cx);
             let picks: Vec<_> = match state.scan() {
-                Machine::NotYet | Machine::Scanning => Vec::new(),
+                Machine::NotYet | Machine::Scanning { .. } => Vec::new(),
                 Machine::Done { suggestions, .. } => suggestions
                     .iter()
                     .map(|suggestion| {
@@ -579,6 +561,7 @@ impl ModelsDialog {
             };
             (picks, state.is_busy(), state.error().map(str::to_owned))
         };
+        crate::online::refresh(cx);
         let body = if picks.is_empty() {
             label(
                 "No model Pistachio knows runs well enough on this device.",
@@ -673,12 +656,15 @@ impl ModelsDialog {
                 "default"
             };
             let id = format!("local-{tier}-{role}");
+            let installing = matches!(status, Some(Status::Installing(_)));
             let action = self.choice_action(models, &id, (*choice)?, status.clone()?, busy, cx);
             Some(
-                h_flex()
-                    .w_full()
-                    .justify_center()
-                    .child(div().debug_selector(move || id).child(action)),
+                h_flex().w_full().justify_center().child(
+                    div()
+                        .when(installing, |this| this.w_full())
+                        .debug_selector(move || id)
+                        .child(action),
+                ),
             )
         });
         let details = v_flex()
@@ -718,6 +704,8 @@ impl ModelsDialog {
                     .pb_2()
                     .child(
                         h_flex()
+                            .w_full()
+                            .justify_center()
                             .gap_2()
                             .child(
                                 div()
@@ -878,8 +866,15 @@ impl ModelsDialog {
                     .children((!notes.is_empty()).then(|| label(notes.join(" · "), cx))),
             )
             .when(with_action, |this| {
+                let installing = matches!(status, Status::Installing(_));
                 let action = self.choice_action(models, &id, choice, status, busy, cx);
-                this.child(div().flex_none().debug_selector(move || id).child(action))
+                this.child(
+                    div()
+                        .flex_none()
+                        .when(installing, |this| this.w(px(220.)))
+                        .debug_selector(move || id)
+                        .child(action),
+                )
             })
     }
 
@@ -900,7 +895,7 @@ impl ModelsDialog {
                 let (models, choice) = (models.clone(), choice.clone());
                 let name = choice.model.name.clone();
                 let button = if size > 0 {
-                    download_and_run_button(id.clone(), &name, size)
+                    download_and_run_button(id.clone(), &name, size, cx)
                 } else {
                     Button::new(SharedString::from(id.clone()))
                         .label("Set up")
@@ -916,26 +911,43 @@ impl ModelsDialog {
             }
             Status::Installing(progress) => {
                 let models = models.clone();
-                let text = progress.map_or_else(
-                    || "Starting the download…".to_owned(),
-                    |progress| {
+                let muted = cx.theme().muted_foreground;
+                let accent = crate::theme::palette(cx).accent;
+                let (stage, amount, fraction) = match &progress {
+                    None => ("Starting the download…".to_owned(), String::new(), 0.),
+                    Some(progress) => (
+                        progress.stage.label(),
                         format!(
-                            "{} {:.0}%",
-                            progress.stage.label(),
+                            "{} of {} · {:.0}%",
+                            size_label(progress.done),
+                            size_label(progress.total),
                             progress.fraction() * 100.
-                        )
-                    },
-                );
-                h_flex()
-                    .gap_2()
-                    .child(label(text, cx).max_w(px(180.)).truncate())
+                        ),
+                        progress.fraction(),
+                    ),
+                };
+                v_flex()
+                    .w_full()
+                    .gap_1p5()
                     .child(
-                        Button::new(SharedString::from(format!("{id}-cancel")))
-                            .label("Cancel")
-                            .ghost()
-                            .xsmall()
-                            .on_click(move |_, _, cx| models.update(cx, |m, _| m.cancel())),
+                        h_flex()
+                            .w_full()
+                            .gap_2()
+                            .text_xs()
+                            .child(turning_loader(accent).small())
+                            .child(div().flex_1().min_w_0().child(FadingText::new(stage)))
+                            .child(div().flex_none().text_color(muted).child(amount))
+                            .child(
+                                Button::new(SharedString::from(format!("{id}-cancel")))
+                                    .label("Cancel")
+                                    .ghost()
+                                    .xsmall()
+                                    .on_click(move |_, _, cx| {
+                                        models.update(cx, LocalModels::cancel);
+                                    }),
+                            ),
                     )
+                    .child(progress_bar(fraction, cx))
                     .into_any_element()
             }
             Status::Installed => {
@@ -1077,6 +1089,52 @@ impl ModelsDialog {
                 ))
             })
     }
+}
+
+/// A bar that fills while the hardware is scanned (scanning `since`; `found` once it ended),
+/// saying what is looked at, beside a turning loader.
+fn render_scanning(since: std::time::Instant, found: bool, cx: &App) -> AnyElement {
+    const STEPS: [&str; 5] = [
+        "Reading the processor…",
+        "Measuring the memory…",
+        "Looking for graphics…",
+        "Checking the free disk…",
+        "Looking for build tools…",
+    ];
+    let theme = cx.theme();
+    let (border, muted) = (theme.border, theme.muted_foreground);
+    let fill = crate::theme::palette(cx).accent;
+    let progress = crate::local_models::scan_progress(since.elapsed(), found);
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    let step = ((progress * STEPS.len() as f32) as usize).min(STEPS.len() - 1);
+    v_flex()
+        .debug_selector(|| "scanning-hardware".into())
+        .w_full()
+        .gap_2()
+        .px_3()
+        .py_3()
+        .rounded_lg()
+        .border_1()
+        .border_color(border)
+        .child(
+            h_flex()
+                .w_full()
+                .gap_2()
+                .text_xs()
+                .child(turning_loader(fill).small())
+                .child(div().flex_1().child(STEPS[step]))
+                .child(
+                    div()
+                        .text_color(muted)
+                        .child(format!("{:.0}%", progress * 100.)),
+                ),
+        )
+        .child(progress_bar(progress, cx))
+        .into_any_element()
 }
 
 /// What the hardware scan found, a line each.

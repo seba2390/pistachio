@@ -105,7 +105,8 @@ impl PiProcess {
                 command
             }
         };
-        command
+        // No console window on Windows (pi is `pi.cmd`, run by cmd.exe, then Node.js).
+        platform::NoWindow::no_window(&mut command)
             .current_dir(&options.cwd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

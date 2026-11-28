@@ -265,10 +265,45 @@ jobs:
           python script/third-party-licenses.py x86_64-pc-windows-msvc > "$dir/THIRD-PARTY-LICENSES.txt"
           7z a -tzip "$dir.zip" "$dir" > /dev/null
           echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
+          echo "PACKAGE_DIR=$dir" >> "$GITHUB_ENV"
+      # The installer (packaging/windows/pistachio.iss), from the same files as the zip, which
+      # stays for the app's own updates (updater.rs) and for running without installing.
+      - name: Installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup is not installed" }
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' |
+            Select-Object -First 1).Matches[0].Groups[1].Value
+          $name = "Pistachio-$env:GITHUB_REF_NAME-windows-x86_64-setup"
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\$env:PACKAGE_DIR" "/O$PWD\dist" "/F$name" packaging\windows\pistachio.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
+          "SETUP=dist/$name.exe" >> $env:GITHUB_ENV
+      - name: Check the installer
+        shell: pwsh
+        run: |
+          $setup = Resolve-Path $env:SETUP
+          $p = Start-Process -Wait -PassThru $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/LOG=install.log'
+          if ($p.ExitCode -ne 0) { Get-Content install.log; throw "setup exited with $($p.ExitCode)" }
+          $app = "$env:LOCALAPPDATA\Programs\Pistachio"
+          Get-ChildItem $app
+          if (-not (Test-Path "$app\pistachio.exe")) { throw "pistachio.exe was not installed" }
+          $info = (Get-Item "$app\pistachio.exe").VersionInfo
+          "pistachio.exe: $($info.FileDescription) $($info.ProductVersion)"
+          if ($info.ProductName -ne 'Pistachio') { throw "pistachio.exe has no version information" }
+          $start = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Pistachio.lnk"
+          if (-not (Test-Path $start)) { throw "no Start menu shortcut" }
+          $p = Start-Process -Wait -PassThru "$app\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'
+          if ($p.ExitCode -ne 0) { throw "uninstall exited with $($p.ExitCode)" }
+          Start-Sleep -Seconds 3
+          if (Test-Path "$app\pistachio.exe") { throw "uninstalling left pistachio.exe" }
       - uses: actions/upload-artifact@v7
         with:
           name: asset-windows
-          path: ${{ env.ASSET }}
+          path: |
+            ${{ env.ASSET }}
+            ${{ env.SETUP }}
           # Publish needs them only in this run; the release keeps them (and doesn't count
           # toward the Actions storage quota, which 90 days of copies filled).
           retention-days: 1

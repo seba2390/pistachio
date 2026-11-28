@@ -3,7 +3,6 @@
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
 use crate::host::Target;
@@ -296,7 +295,7 @@ pub fn resolve(target: &Target) -> Result<Resolved, RemoteError> {
 }
 
 pub(crate) fn resolve_full(target: &Target) -> Result<ResolvedFull, RemoteError> {
-    let mut command = Command::new(Ssh::program());
+    let mut command = platform::command(Ssh::program());
     command.arg("-G").args(Ssh::target_args(target));
     let output = process::run(command, None, Duration::from_secs(10))?;
     if !output.status.success() {

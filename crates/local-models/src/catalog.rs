@@ -226,7 +226,16 @@ impl Model {
     pub fn is_moe(&self) -> bool {
         self.active_params_b * 2.0 < self.total_params_b
     }
+
+    /// Small enough for nearly any computer: at most [`TINY_PARAMS_B`] billion parameters
+    /// (about 2 GB or less at 4 bits).
+    pub fn is_tiny(&self) -> bool {
+        self.total_params_b <= TINY_PARAMS_B
+    }
 }
+
+/// The most parameters (billions) of a model the Tiny suggestion takes.
+pub const TINY_PARAMS_B: f64 = 3.0;
 
 #[derive(Debug, Deserialize)]
 pub struct Build {

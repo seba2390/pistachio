@@ -129,7 +129,7 @@ fn fork_entry(
 
 /// Runs `gh gist create` (secret) for `path`; returns pi's viewer link and the gist URL.
 fn create_gist(path: &str, env: &ChildEnv) -> Result<(String, String), String> {
-    let output = std::process::Command::new("gh")
+    let output = ::platform::command("gh")
         .args(["gist", "create", "--public=false", path])
         .envs(env.vars().iter().cloned())
         .output()
@@ -3105,7 +3105,7 @@ mod tests {
                     if header("content-encoding") == "zstd" {
                         let script = "process.stdout.write(require('zlib').zstdDecompressSync(\
                                       require('fs').readFileSync(0)))";
-                        let mut node = std::process::Command::new("node")
+                        let mut node = ::platform::command("node")
                             .args(["-e", script])
                             .stdin(std::process::Stdio::piped())
                             .stdout(std::process::Stdio::piped())

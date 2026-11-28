@@ -267,7 +267,7 @@ impl SettingsView {
             let listed = cx
                 .background_executor()
                 .spawn(async move {
-                    let mut command = std::process::Command::new(&program);
+                    let mut command = ::platform::command(&program);
                     command
                         .arg("--list-models")
                         .envs(env.vars().iter().cloned())
@@ -308,7 +308,7 @@ impl SettingsView {
             let version = cx
                 .background_executor()
                 .spawn(async move {
-                    std::process::Command::new(&program)
+                    ::platform::command(&program)
                         .arg("--version")
                         .envs(env.vars().iter().cloned())
                         .stdin(std::process::Stdio::null())
@@ -925,6 +925,7 @@ impl SettingsView {
                 SettingGroup::new()
                     .title("Models")
                     .item(SettingItem::render(|_, _, cx| {
+                        crate::online::refresh(cx);
                         crate::stt::ui::settings_model_rows(cx)
                     })),
             )
@@ -1077,6 +1078,7 @@ fn naming_page(cx: &App) -> SettingPage {
                      once from Hugging Face; nothing ships with the app.",
                 )
                 .item(SettingItem::render(|_, _, cx| {
+                    crate::online::refresh(cx);
                     crate::naming::ui::settings_model_rows(cx)
                 })),
         )

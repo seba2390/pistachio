@@ -134,7 +134,7 @@ fn command(root: &Path, settings: &Path, port: u16) -> Result<Command, String> {
     let modules =
         std::env::join_paths([layout.searxng(), layout.packages()]).map_err(|e| e.to_string())?;
     let secret = secret().map_err(|e| format!("no random numbers: {e}"))?;
-    let mut command = Command::new(layout.python());
+    let mut command = platform::command(layout.python());
     command
         .args(["-c", LAUNCH])
         .env_clear()

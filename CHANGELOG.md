@@ -6,6 +6,58 @@ All notable changes to PI-gui are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-28
+
+### Added
+
+- **A Windows installer.** `Pistachio-…-windows-x86_64-setup.exe` installs Pistachio for your
+  user (no administrator rights) into `%LOCALAPPDATA%\Programs\Pistachio`, with the Pistachio
+  logo throughout, a Start menu entry, an optional desktop shortcut, **Launch Pistachio** at the
+  end and an uninstaller in Settings → Apps. The zip is still there, to run without installing.
+- **Pistachio finds pi, or installs it.** At startup it looks for pi: on the `PATH` (also the
+  login shell's), then where npm, nvm, fnm, Volta, asdf, mise, n, nvm-windows, Scoop, pnpm, Bun,
+  Yarn and Homebrew put it, and uses what it finds. When pi is nowhere, a card offers **Install
+  pi**, which installs it unattended, with its own Node.js if needed and without administrator
+  rights, into `~/.pistachio/server` on macOS, Linux and Windows, and **Find pi…**, to choose the
+  program (or its folder), which is checked before it is used.
+- **A fourth suggested model: Tiny.** Deploy new model now suggests Tiny, Fast, Balanced and Most
+  capable. Tiny is the most capable model of at most 3B parameters, in its lightest build, so
+  there is always one that nearly any computer runs. The catalog adds MiniCPM5-2B (ahead of
+  Qwen3.5-4B on tool calling, 1.6 GB) and MiniCPM5-1B (0.7 GB).
+- **Downloads wait for the internet.** Where Pistachio downloads something (a suggested local
+  model, a document parser, a speech-to-text or naming model, SearXNG, an update), it first checks
+  that the internet can be reached. When it can't, the download button shows a crossed-out Wi-Fi
+  icon and says **No internet**, and nothing starts; clicking it checks again.
+- **A progress bar while a local model downloads.** **Download and run** turns into the step it is
+  on, how much has arrived of how much, a progress bar and Cancel.
+
+### Changed
+
+- The names of the suggested models are centered on their cards.
+- Windows: `pistachio.exe` has the Pistachio icon (in Explorer, the taskbar and the window) and
+  says what it is in Task Manager.
+
+### Fixed
+
+- Windows: the window had no minimize, maximize and close buttons. They are at the right of the
+  top bar (also on Linux when the app draws its own window frame).
+- Windows: scanning the hardware, downloading and running a model, and other work opened
+  console (PowerShell) windows. Programs Pistachio starts now run without a window.
+- Windows: the hardware scan often found no processor or memory (PowerShell took too long to
+  start), and never the free disk or a graphics card other than NVIDIA's. It now asks Windows
+  itself: memory, processor, free disk and any graphics card with memory of its own (AMD and Intel
+  too).
+- The hardware scan's bar now fills from empty over two seconds (longer if the scan takes longer)
+  and its loader turns, also when the system asks for reduced motion; before, it showed full at
+  once.
+- The tokens-per-second pill stayed away for good for local models (Ternary Bonsai with
+  llama.cpp, for one) once a reply that only called a tool, like a web search, was taken for
+  hidden thinking: a tool call costs tokens that never stream. Replies that call a tool are no
+  longer judged, the latest judged reply decides, and a server that reports no token counts gets
+  estimates (marked "~") instead of no pill.
+- Cancel on a local model's download takes effect at once: the button comes back right away, also
+  when the connection had stalled.
+
 ## [0.6.0] - 2026-11-28
 
 ### Added
@@ -852,7 +904,8 @@ chats, skills and model management. Changes since the last private build:
 - A corrupt `hosts.json` is kept as a backup.
 - A remembered terminal height can no longer squeeze out the chat.
 
-[Unreleased]: https://github.com/seba2390/pistachio/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/seba2390/pistachio/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/seba2390/pistachio/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/seba2390/pistachio/compare/v0.5.10...v0.6.0
 [0.5.10]: https://github.com/seba2390/pistachio/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/seba2390/pistachio/compare/v0.5.8...v0.5.9

@@ -1289,6 +1289,249 @@
    "speeds": []
   },
   {
+   "id": "minicpm5-2b",
+   "name": "MiniCPM5-2B",
+   "released": "Sep 2026",
+   "license": "Apache 2.0",
+   "why": "Strong tool use and coding for 2B (ahead of Qwen3.5-4B on BFCL v4 in its card); plain Llama architecture; thinking switch; 128K context; ships a speculative-decoding drafter; 1.6 GB at Q4",
+   "params": "2.5B dense",
+   "total_params_b": 2.5,
+   "active_params_b": 2.5,
+   "context": 131072,
+   "quality": 57,
+   "vision": false,
+   "reasoning": true,
+   "thinking_levels": {},
+   "tool_calling": true,
+   "sources": [
+    "https://github.com/openbmb/minicpm",
+    "https://huggingface.co/openbmb/MiniCPM5-2B",
+    "https://jacar.es/en/open-models-september-2026/"
+   ],
+   "builds": [
+    {
+     "id": "gguf-q4_k_m",
+     "format": "gguf",
+     "quant": "Q4_K_M",
+     "repo": "openbmb/MiniCPM5-2B-GGUF",
+     "revision": "8ad02b786ab81e33d465e1c80562640c55ab2877",
+     "files": [
+      {
+       "name": "MiniCPM5-2B-Q4_K_M.gguf",
+       "size": 1561318368,
+       "sha256": "ec2d5801640099e97d8d7e8003ad4d81f336e757811f03a26173dddf386602fd",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/resolve/8ad02b786ab81e33d465e1c80562640c55ab2877/MiniCPM5-2B-Q4_K_M.gguf"
+      }
+     ],
+     "size": 1561318368,
+     "engines": [
+      "llama-cpp",
+      "ik-llama-cpp"
+     ],
+     "note": null
+    },
+    {
+     "id": "gguf-q8_0",
+     "format": "gguf",
+     "quant": "Q8_0",
+     "repo": "openbmb/MiniCPM5-2B-GGUF",
+     "revision": "8ad02b786ab81e33d465e1c80562640c55ab2877",
+     "files": [
+      {
+       "name": "MiniCPM5-2B-Q8_0.gguf",
+       "size": 2679710688,
+       "sha256": "c5415f8989bf88a8288f1b55a3cc371af53c07b0faa220a63bd7a990cfaba078",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-GGUF/resolve/8ad02b786ab81e33d465e1c80562640c55ab2877/MiniCPM5-2B-Q8_0.gguf"
+      }
+     ],
+     "size": 2679710688,
+     "engines": [
+      "llama-cpp",
+      "ik-llama-cpp"
+     ],
+     "note": null
+    },
+    {
+     "id": "mlx-4bit",
+     "format": "mlx",
+     "quant": "4bit",
+     "repo": "openbmb/MiniCPM5-2B-MLX",
+     "revision": "c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62",
+     "files": [
+      {
+       "name": "chat_template.jinja",
+       "size": 9060,
+       "sha256": "cc945752db555d60949b16989df4ccfeb52a313d6b4b5c5229dd786e2e9fcf1c",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/chat_template.jinja"
+      },
+      {
+       "name": "config.json",
+       "size": 886,
+       "sha256": "deb9ca33e863cbc84a9ab7209cd924fc05505dc33270c807d47f1b78fbd53a50",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/config.json"
+      },
+      {
+       "name": "generation_config.json",
+       "size": 213,
+       "sha256": "9ac4f32e5f32358697a9f438a3ea89ef80e6ba786c72c49e932f9f21c122fdb1",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/generation_config.json"
+      },
+      {
+       "name": "model.safetensors",
+       "size": 1416035216,
+       "sha256": "c207798696a4a454e7ac211b25227625466c693335941cee8904fb922f295cc1",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/model.safetensors"
+      },
+      {
+       "name": "model.safetensors.index.json",
+       "size": 68721,
+       "sha256": "ccf202e0a06fe3c7eb8f354cfb29412a5e64956ad895413d4d9267ae4b3a6045",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/model.safetensors.index.json"
+      },
+      {
+       "name": "tokenizer.json",
+       "size": 9894271,
+       "sha256": "3e065a558a034185fe299917b398685c1facd0169a9eea1e629eb30c171fed81",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/tokenizer.json"
+      },
+      {
+       "name": "tokenizer_config.json",
+       "size": 435,
+       "sha256": "b89503c3e5070c6b6d33daf2e20cb4a5c88537c1670d9b7e0cfb4506a61448a9",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-2B-MLX/resolve/c8c072dbfbc5ce9c8faf3fbff9665b86fdc29c62/tokenizer_config.json"
+      }
+     ],
+     "size": 1426008802,
+     "engines": [
+      "rapid-mlx"
+     ],
+     "note": null
+    }
+   ],
+   "speeds": []
+  },
+  {
+   "id": "minicpm5-1b",
+   "name": "MiniCPM5-1B",
+   "released": "May 2026",
+   "license": "Apache 2.0",
+   "why": "Leads the 1B class on reasoning, coding and agentic tasks; thinking switch; 0.7 GB at Q4, so it runs on nearly any computer",
+   "params": "1.1B dense",
+   "total_params_b": 1.1,
+   "active_params_b": 1.1,
+   "context": 131072,
+   "quality": 30,
+   "vision": false,
+   "reasoning": true,
+   "thinking_levels": {},
+   "tool_calling": true,
+   "sources": [
+    "https://github.com/openbmb/minicpm",
+    "https://huggingface.co/openbmb/MiniCPM5-1B"
+   ],
+   "builds": [
+    {
+     "id": "gguf-q4_k_m",
+     "format": "gguf",
+     "quant": "Q4_K_M",
+     "repo": "openbmb/MiniCPM5-1B-GGUF",
+     "revision": "5385560dd3e232bcc3577fd9442c332cad2facbd",
+     "files": [
+      {
+       "name": "MiniCPM5-1B-Q4_K_M.gguf",
+       "size": 688065920,
+       "sha256": "81b64d05a23b17b34c475f42b3e72fbde62d4b92cc34541f7a8031d0752deafa",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/resolve/5385560dd3e232bcc3577fd9442c332cad2facbd/MiniCPM5-1B-Q4_K_M.gguf"
+      }
+     ],
+     "size": 688065920,
+     "engines": [
+      "llama-cpp",
+      "ik-llama-cpp"
+     ],
+     "note": null
+    },
+    {
+     "id": "gguf-q8_0",
+     "format": "gguf",
+     "quant": "Q8_0",
+     "repo": "openbmb/MiniCPM5-1B-GGUF",
+     "revision": "5385560dd3e232bcc3577fd9442c332cad2facbd",
+     "files": [
+      {
+       "name": "MiniCPM5-1B-Q8_0.gguf",
+       "size": 1153529216,
+       "sha256": "0dc7638539067268774c275a14a6ec9c7e01f7eeb2cff606c8590361fa527e4c",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-GGUF/resolve/5385560dd3e232bcc3577fd9442c332cad2facbd/MiniCPM5-1B-Q8_0.gguf"
+      }
+     ],
+     "size": 1153529216,
+     "engines": [
+      "llama-cpp",
+      "ik-llama-cpp"
+     ],
+     "note": null
+    },
+    {
+     "id": "mlx-4bit",
+     "format": "mlx",
+     "quant": "4bit",
+     "repo": "openbmb/MiniCPM5-1B-MLX",
+     "revision": "c973e24a2c77861038301f4e27d1b34a5931fc91",
+     "files": [
+      {
+       "name": "chat_template.jinja",
+       "size": 9062,
+       "sha256": "7451a05cf1e28a79d97d7c0bc951028c0b1915119bf9046acd06a0e3d931f47c",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/chat_template.jinja"
+      },
+      {
+       "name": "config.json",
+       "size": 926,
+       "sha256": "b579f8c12b692af13bb90402c704c3a235d183c0410b37537447c17975a8ddcc",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/config.json"
+      },
+      {
+       "name": "generation_config.json",
+       "size": 201,
+       "sha256": "3fd3b57f068f133267d97a1e06d7209aaeab546010e7ec71bace0d3fabd1f755",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/generation_config.json"
+      },
+      {
+       "name": "model.safetensors",
+       "size": 608026621,
+       "sha256": "a23e0c5c79944a0b2cc92cb9ab79376b4dce41e2312383727e21ee43fe19cb4f",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/model.safetensors"
+      },
+      {
+       "name": "model.safetensors.index.json",
+       "size": 39380,
+       "sha256": "b9f00d16700ba0dd01bbd72d270080757355ddf41fbe678620a93dc39d5c8639",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/model.safetensors.index.json"
+      },
+      {
+       "name": "tokenizer.json",
+       "size": 9894271,
+       "sha256": "3e065a558a034185fe299917b398685c1facd0169a9eea1e629eb30c171fed81",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/tokenizer.json"
+      },
+      {
+       "name": "tokenizer_config.json",
+       "size": 417,
+       "sha256": "3f18b805749e5e506321c6d231f0e760c44cc030c80b4b0544e41cb3ecb16846",
+       "url": "https://huggingface.co/openbmb/MiniCPM5-1B-MLX/resolve/c973e24a2c77861038301f4e27d1b34a5931fc91/tokenizer_config.json"
+      }
+     ],
+     "size": 617970878,
+     "engines": [
+      "rapid-mlx"
+     ],
+     "note": null
+    }
+   ],
+   "speeds": []
+  },
+  {
    "id": "nemotron-3.5-bolt-e4b",
    "name": "Nemotron 3.5 Bolt E4B",
    "released": "23 Oct 2026",

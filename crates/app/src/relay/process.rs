@@ -3,7 +3,7 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin, Stdio};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -138,7 +138,7 @@ fn start(launch: &Launch) -> Result<(Running, Vec<Value>), String> {
     let log_path = launch.dir.join("relay.log");
     let log = std::fs::File::create(&log_path).map_err(fail)?;
     let control_key = random();
-    let mut command = Command::new(&launch.program);
+    let mut command = ::platform::command(&launch.program);
     command
         .args([
             "--mode",
@@ -160,7 +160,6 @@ fn start(launch: &Launch) -> Result<(Running, Vec<Value>), String> {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(log);
-    remote::no_console(&mut command);
     let mut child = command.spawn().map_err(fail)?;
     let stdin = child.stdin.take();
     let stdout = child.stdout.take();

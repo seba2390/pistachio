@@ -16,7 +16,7 @@ use super::view::{go_back_to_previous_service, keep_service, update_web, web_con
 use crate::search_server::{Running, SearchServer, search_server};
 use crate::theme::palette;
 use crate::ui::dialog::{on_submit, open_form_dialog};
-use crate::ui::download::{Details, Part, download_label};
+use crate::ui::download::{Details, Part, download_label, offline_aware};
 use crate::ui::{AppIcon, QuietButton as _, light};
 
 /// What an installation takes on disk, about.
@@ -100,7 +100,9 @@ impl Action {
         match self {
             Self::Start => server.update(cx, SearchServer::start),
             Self::Stop => server.update(cx, SearchServer::stop),
-            Self::Update => server.update(cx, SearchServer::install),
+            Self::Update => crate::online::when_online(window, cx, move |_, cx| {
+                server.update(cx, SearchServer::install);
+            }),
             Self::CancelDownload => server.update(cx, |server, _| server.cancel_download()),
             Self::RunHere => run_here(window, cx),
             Self::CheckAgain => {
@@ -345,6 +347,7 @@ pub fn open_setup(window: &mut Window, cx: &mut App) {
         }
     };
     let details = setup_details(&problem);
+    crate::online::refresh(cx);
     open_form_dialog(None, window, cx, move |dialog, _, cx| {
         dialog
             .title("Download SearXNG?")
@@ -373,14 +376,19 @@ pub fn open_setup(window: &mut Window, cx: &mut App) {
                     .child(div().flex_1())
                     .child(cancel_button("searxng-setup-cancel", cx))
                     .child(
-                        Button::new("searxng-setup-run")
-                            .form_action(cx)
-                            .icon(AppIcon::Download)
-                            .label(format!("{} and run", download_label(details.size)))
-                            .on_click(|_, window, cx| {
+                        offline_aware(
+                            Button::new("searxng-setup-run")
+                                .form_action(cx)
+                                .icon(AppIcon::Download)
+                                .label(format!("{} and run", download_label(details.size))),
+                            cx,
+                        )
+                        .on_click(|_, window, cx| {
+                            crate::online::when_online(window, cx, |window, cx| {
                                 window.close_dialog(cx);
                                 use_local(cx);
-                            }),
+                            });
+                        }),
                     ),
             )
     });

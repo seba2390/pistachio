@@ -42,6 +42,7 @@ pub enum AppIcon {
     SquarePen,
     TextWrap,
     Trash,
+    WifiOff,
     Wrench,
 }
 
@@ -86,6 +87,7 @@ impl AppIcon {
             Self::Plug => "icons/plug.svg",
             Self::ExternalLink => "icons/external-link.svg",
             Self::ScrollText => "icons/scroll-text.svg",
+            Self::WifiOff => "icons/wifi-off.svg",
             Self::Wrench => "icons/wrench.svg",
         }
     }

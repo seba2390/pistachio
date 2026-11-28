@@ -14,12 +14,19 @@
 //! shown for it. No estimate is shown either before one of its replies has checked out; only the
 //! exact figure at the end, once it does. A provider that reports its count as it goes is exact
 //! throughout.
+//!
+//! A reply that calls a tool is not judged: a tool call costs tokens that never stream (its
+//! name, the markup around its arguments), so a short one looks hidden when it isn't. The latest
+//! reply that is judged decides, so one odd reply doesn't hide a model for good. A server that
+//! reports no count at all (some local engines) has its rate estimated with [`DEFAULT_SCALE`],
+//! also at the end, and says so.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::time::{Duration, Instant};
 
 use pi_rpc::protocol::{
-    AgentMessage, AssistantMessage, AssistantMessageEvent, Event, StopReason, ThinkingLevel, Usage,
+    AgentMessage, AssistantMessage, AssistantMessageEvent, ContentBlock, Event, StopReason,
+    ThinkingLevel, Usage,
 };
 use serde::{Deserialize, Serialize};
 
@@ -189,6 +196,8 @@ pub struct ModelRate {
     errors: VecDeque<f64>,
     /// Its provider reports output tokens as the reply streams: no estimate needed.
     pub streams_usage: bool,
+    /// Its server reported no output tokens for a reply that wrote some: only estimates.
+    pub uncounted: bool,
     /// Whether its replies show all they write, by thinking setting (`off`, `on`); missing until
     /// a reply tells.
     visible: BTreeMap<String, bool>,
@@ -230,7 +239,7 @@ impl ModelRate {
     }
 
     fn shows(&self, thinking: bool) -> bool {
-        self.streams_usage || self.is_visible(thinking)
+        self.streams_usage || self.uncounted || self.is_visible(thinking)
     }
 }
 
@@ -256,11 +265,13 @@ pub enum Accuracy {
     Estimate { typical_error: f64, replies: usize },
 }
 
-/// A finished reply's exact rate.
+/// A finished reply's rate: exact, unless its server counts nothing.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Done {
     /// When the reply ended.
     pub at: Instant,
+    /// Estimated from its text: its server reports no count.
+    pub estimated: bool,
     pub per_second: f64,
     /// Output tokens from its first streamed token to its end, and how long that took.
     pub tokens: u64,
@@ -317,6 +328,8 @@ struct Reply {
     usage: u64,
     /// How often the reported output grew while it streamed.
     usage_moves: u32,
+    /// It calls a tool.
+    calls_tools: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -337,6 +350,7 @@ impl Reply {
             usage_start: message.usage.output,
             usage: message.usage.output,
             usage_moves: 0,
+            calls_tools: false,
         }
     }
 
@@ -345,11 +359,14 @@ impl Reply {
             AssistantMessageEvent::TextDelta {
                 content_index,
                 delta,
-            }
-            | AssistantMessageEvent::ToolcallDelta {
+            } => (*content_index, false, delta),
+            AssistantMessageEvent::ToolcallDelta {
                 content_index,
                 delta,
-            } => (*content_index, false, delta),
+            } => {
+                self.calls_tools = true;
+                (*content_index, false, delta)
+            }
             AssistantMessageEvent::ThinkingDelta {
                 content_index,
                 delta,
@@ -533,7 +550,18 @@ impl RateMeter {
         let tokens = message.usage.output;
         let units = reply.units();
         let key = thinking_key(reply.thinking);
-        if tokens >= MIN_REPLY_TOKENS && units > 0. {
+        let calls_tools = reply.calls_tools
+            || message
+                .content
+                .iter()
+                .any(|block| matches!(block, ContentBlock::ToolCall(_)));
+        // Wrote something, and its server counted none of it.
+        let uncounted = tokens == 0 && units * DEFAULT_SCALE >= MIN_REPLY_TOKENS as f64;
+        if uncounted != model.uncounted && (uncounted || tokens > 0) {
+            model.uncounted = uncounted;
+            changed = true;
+        }
+        if tokens >= MIN_REPLY_TOKENS && units > 0. && !calls_tools {
             let scale = model.scale();
             let ratio = tokens as f64 / (units * scale);
             let limit = if model.samples.is_empty() {
@@ -552,19 +580,25 @@ impl RateMeter {
                     push_capped(&mut model.errors, (1. / ratio - 1.).abs());
                 }
                 push_capped(&mut model.samples, Sample { tokens, units });
-                if !model.visible.contains_key(key) {
-                    model.visible.insert(key.to_owned(), true);
-                }
+                // The latest judged reply decides.
+                model.visible.insert(key.to_owned(), true);
                 changed = true;
             }
         }
 
-        let produced = tokens.saturating_sub(reply.usage_start);
+        let estimated = model.uncounted;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a reply's tokens
+        let produced = if estimated {
+            (units * model.scale()).round() as u64
+        } else {
+            tokens.saturating_sub(reply.usage_start)
+        };
         let elapsed = now.saturating_duration_since(first_at);
         if model.shows(reply.thinking) && produced >= MIN_DONE_TOKENS && elapsed >= MIN_DONE_TIME {
-            let exact = reply.counts_live(Some(model));
+            let exact = !estimated && reply.counts_live(Some(model));
             self.done = Some(Done {
                 at: now,
+                estimated,
                 per_second: produced as f64 / elapsed.as_secs_f64(),
                 tokens: produced,
                 seconds: elapsed.as_secs_f64(),
@@ -586,8 +620,9 @@ impl RateMeter {
     fn live(&self, now: Instant, calibration: &RateCalibration) -> Option<RateView> {
         let reply = self.reply.as_ref()?;
         let model = calibration.model(&reply.model);
-        let exact = reply.counts_live(model);
-        if !exact && !model.is_some_and(|model| model.is_visible(reply.thinking)) {
+        let uncounted = model.is_some_and(|model| model.uncounted);
+        let exact = !uncounted && reply.counts_live(model);
+        if !exact && !uncounted && !model.is_some_and(|model| model.is_visible(reply.thinking)) {
             return None;
         }
         let scale = model.map_or(DEFAULT_SCALE, ModelRate::scale);
@@ -888,6 +923,105 @@ mod tests {
         assert!((per_second - 40.).abs() < 1e-6, "{per_second}");
         meter.apply(&end("g", 86, 0), now, &mut calibration);
         assert!(calibration.model("p/g").unwrap().streams_usage);
+    }
+
+    /// Streams a reply that only calls a tool: a few units of arguments, and `output` tokens
+    /// (the call's markup and name never stream).
+    fn tool_call(
+        meter: &mut RateMeter,
+        calibration: &mut RateCalibration,
+        at: Instant,
+        output: u64,
+    ) -> Instant {
+        meter.apply(&start("m", "off"), at, calibration);
+        let mut now = at;
+        for piece in ["{\"query\": ", "\"weather in ", "Copenhagen\"}"] {
+            now += Duration::from_millis(100);
+            meter.apply(&delta("toolcall_delta", piece, 1), now, calibration);
+        }
+        let end: Event = serde_json::from_value(json!({
+            "type": "message_end",
+            "message": {"role": "assistant", "provider": "p", "model": "m",
+                        "content": [{"type": "toolCall", "id": "1", "name": "web_search",
+                                     "arguments": {"query": "weather in Copenhagen"}}],
+                        "stopReason": "toolUse", "usage": {"output": output}}
+        }))
+        .unwrap();
+        meter.apply(&end, now, calibration);
+        now
+    }
+
+    /// A short tool call costs many more tokens than its arguments account for; that is not
+    /// hidden text, and the estimate goes on (as with a local model searching the web).
+    #[test]
+    fn a_tool_call_does_not_hide_the_estimate() {
+        let mut meter = RateMeter::default();
+        let mut calibration = RateCalibration::default();
+        let at = Instant::now();
+        let at = reply(&mut meter, &mut calibration, at, "m", "off", 30, 90, false);
+        let at = tool_call(&mut meter, &mut calibration, at, 40);
+        let model = calibration.model("p/m").unwrap();
+        assert!(model.is_visible(false));
+        assert_eq!(model.samples.len(), 1, "a tool call is not a sample");
+        let at = reply(&mut meter, &mut calibration, at, "m", "off", 30, 90, false);
+        meter.apply(&start("m", "off"), at, &mut calibration);
+        for step in 1..20 {
+            meter.apply(
+                &delta("text_delta", "the quick fox ", 1),
+                at + Duration::from_millis(100 * step),
+                &mut calibration,
+            );
+        }
+        assert!(matches!(
+            meter.view(at + Duration::from_secs(2), &calibration),
+            Some(RateView::Live { .. })
+        ));
+    }
+
+    /// One reply that looked hidden doesn't hide the model for good: the next one that checks
+    /// out shows it again.
+    #[test]
+    fn the_latest_judged_reply_decides() {
+        let mut meter = RateMeter::default();
+        let mut calibration = RateCalibration::default();
+        let at = Instant::now();
+        let at = reply(&mut meter, &mut calibration, at, "m", "off", 30, 900, false);
+        assert!(!calibration.model("p/m").unwrap().is_visible(false));
+        reply(&mut meter, &mut calibration, at, "m", "off", 30, 90, false);
+        assert!(calibration.model("p/m").unwrap().is_visible(false));
+    }
+
+    /// A server that counts nothing (output 0) is estimated, live and at the end, and says so.
+    #[test]
+    fn a_server_that_counts_nothing_is_estimated() {
+        let mut meter = RateMeter::default();
+        let mut calibration = RateCalibration::default();
+        let at = Instant::now();
+        let now = reply(&mut meter, &mut calibration, at, "m", "off", 30, 0, false);
+        assert!(calibration.model("p/m").unwrap().uncounted);
+        let Some(RateView::Done(done)) = meter.view(now, &calibration) else {
+            panic!("no figure at the end");
+        };
+        assert!(done.estimated);
+        assert!(done.tokens > 0);
+        let at = now + Duration::from_secs(1);
+        meter.apply(&start("m", "off"), at, &mut calibration);
+        for step in 1..20 {
+            meter.apply(
+                &delta("text_delta", "the quick fox ", 0),
+                at + Duration::from_millis(100 * step),
+                &mut calibration,
+            );
+        }
+        let Some(RateView::Live { accuracy, .. }) =
+            meter.view(at + Duration::from_secs(2), &calibration)
+        else {
+            panic!("no estimate");
+        };
+        assert!(matches!(accuracy, Accuracy::Estimate { .. }));
+        // It counts after all: exact again.
+        reply(&mut meter, &mut calibration, at, "m", "off", 30, 90, false);
+        assert!(!calibration.model("p/m").unwrap().uncounted);
     }
 
     #[test]

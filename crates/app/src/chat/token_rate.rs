@@ -256,6 +256,15 @@ fn describe(view: &RateView) -> (bool, String, String) {
             };
             (true, text, tip)
         }
+        RateView::Done(done) if done.estimated => (
+            false,
+            format!("avg. ~{} tok/s", done.per_second.round()),
+            format!(
+                "The reply's average, estimated from its text: about {} tokens in {:.1} s. \
+                 This model's server doesn't count them.",
+                done.tokens, done.seconds
+            ),
+        ),
         RateView::Done(done) => (
             false,
             format!("avg. {} tok/s", done.per_second.round()),
@@ -335,6 +344,7 @@ mod tests {
     fn done(at: Instant) -> RateView {
         RateView::Done(Done {
             at,
+            estimated: false,
             per_second: 40.,
             tokens: 400,
             seconds: 10.,

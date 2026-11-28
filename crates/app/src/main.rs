@@ -19,6 +19,7 @@ mod hosts;
 mod local_models;
 mod model_store;
 mod naming;
+mod online;
 mod panels;
 mod perf;
 mod persist;

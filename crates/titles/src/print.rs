@@ -11,7 +11,7 @@
 use std::ffi::OsString;
 use std::io::{Read as _, Write as _};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -102,7 +102,7 @@ pub fn name_with_pi(
 /// Runs `invocation` with `input` on stdin and returns its stdout, or an error with the end
 /// of its stderr when it fails or takes longer than `timeout` (then it is killed).
 pub fn run(invocation: &Invocation, input: &str, timeout: Duration) -> anyhow::Result<String> {
-    let mut child = Command::new(&invocation.program)
+    let mut child = platform::command(&invocation.program)
         .args(&invocation.args)
         .envs(invocation.env.iter().map(|(key, value)| (key, value)))
         .current_dir(&invocation.cwd)

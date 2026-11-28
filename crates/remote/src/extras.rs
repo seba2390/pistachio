@@ -4,7 +4,6 @@
 
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::process::Command;
 use std::time::Duration;
 
 use crate::RemoteError;
@@ -166,7 +165,7 @@ impl Ssh {
             }
         });
         for key in &keys {
-            let mut command = Command::new("ssh-keygen");
+            let mut command = platform::command("ssh-keygen");
             command.arg("-R").arg(key);
             if let Some(file) = &file {
                 command.arg("-f").arg(file);
@@ -216,6 +215,8 @@ impl workspace::RemoteShell for Ssh {
 
 #[cfg(test)]
 mod tests {
+    use std::process::Command;
+
     use super::*;
     use crate::host::Target;
 
