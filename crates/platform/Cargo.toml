@@ -1,0 +1,22 @@
+[package]
+name = "platform"
+description = "UI-agnostic helpers for the operating system: child processes without console windows on Windows, and what Windows says about the computer's hardware"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# The version GPUI's Windows backend uses, so it is compiled once.
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dxgi",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+] }
+
+[lints]
+workspace = true

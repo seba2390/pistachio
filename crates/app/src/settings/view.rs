@@ -267,7 +267,7 @@ impl SettingsView {
             let listed = cx
                 .background_executor()
                 .spawn(async move {
-                    let mut command = std::process::Command::new(&program);
+                    let mut command = ::platform::command(&program);
                     command
                         .arg("--list-models")
                         .envs(env.vars().iter().cloned())
@@ -308,7 +308,7 @@ impl SettingsView {
             let version = cx
                 .background_executor()
                 .spawn(async move {
-                    std::process::Command::new(&program)
+                    ::platform::command(&program)
                         .arg("--version")
                         .envs(env.vars().iter().cloned())
                         .stdin(std::process::Stdio::null())

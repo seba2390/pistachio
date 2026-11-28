@@ -171,7 +171,7 @@ fn command(layout: &Layout, parser: Parser, file: &Path, run: &Path) -> Result<C
     let script = script(parser).ok_or("it is not a separate program")?;
     let home = run.join("home");
     fs::create_dir_all(&home).map_err(|e| format!("creating {}: {e}", home.display()))?;
-    let mut command = Command::new(layout.python());
+    let mut command = platform::command(layout.python());
     command
         .arg("-c")
         .arg(format!("{WATCH}{script}"))

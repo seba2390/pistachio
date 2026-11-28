@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+platform.workspace = true
 anyhow.workspace = true
 log.workspace = true
 # The optional local namer: quantized GGUF models on the CPU, pure Rust (no native

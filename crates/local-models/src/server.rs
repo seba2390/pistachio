@@ -85,7 +85,7 @@ impl Server {
         };
         let args: Vec<String> = engine.launch.iter().map(|arg| fill(arg)).collect();
         let (program, rest) = args.split_first().ok_or("the engine has no command")?;
-        let mut command = Command::new(program);
+        let mut command = platform::command(program);
         command
             .args(rest)
             .current_dir(engine_dir(root, engine))

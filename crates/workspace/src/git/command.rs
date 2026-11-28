@@ -41,7 +41,7 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let mut cmd = Command::new("git");
+    let mut cmd = platform::command("git");
     cmd.current_dir(dir);
     for setting in CONFIG_OVERRIDES {
         cmd.arg("-c").arg(setting);

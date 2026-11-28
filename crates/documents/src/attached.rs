@@ -99,7 +99,7 @@ fn draw(path: &Path, to: &Path) -> bool {
         command.arg(path).arg("--out").arg(to);
         command
     } else if cfg!(unix) {
-        let mut command = Command::new("pdftoppm");
+        let mut command = platform::command("pdftoppm");
         command.args([
             "-png",
             "-singlefile",

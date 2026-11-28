@@ -679,7 +679,7 @@ impl Ssh {
         let _ = fs::remove_file(&file);
         let mut known = OsString::from("UserKnownHostsFile=");
         known.push(&file);
-        let mut command = Command::new(Self::program());
+        let mut command = platform::command(Self::program());
         command
             .arg("-T")
             .args(["-o", "ControlMaster=no", "-o", "ControlPath=none"])
@@ -725,7 +725,7 @@ impl Ssh {
                 other => other,
             });
         }
-        let mut keygen = Command::new("ssh-keygen");
+        let mut keygen = platform::command("ssh-keygen");
         keygen.arg("-l").arg("-f").arg(&file);
         let prints = process::run(keygen, None, KEYSCAN_TIMEOUT)?;
         if !prints.status.success() {
@@ -737,7 +737,7 @@ impl Ssh {
     /// `ssh` for this host. If the control directory is not private, sharing is switched off
     /// (ssh keeps the first value of an option) so no socket in it is ever used.
     pub(crate) fn ssh_command(&self) -> Command {
-        let mut command = Command::new(Self::program());
+        let mut command = platform::command(Self::program());
         if let Err(error) = self.ensure_control_dir() {
             log::warn!("{error}");
             command.args(["-o", "ControlMaster=no", "-o", "ControlPath=none"]);

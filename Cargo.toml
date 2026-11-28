@@ -21,6 +21,7 @@ local-models = { path = "crates/local-models" }
 pi-config = { path = "crates/pi-config" }
 pi-rpc = { path = "crates/pi-rpc" }
 pi-sessions = { path = "crates/pi-sessions" }
+platform = { path = "crates/platform" }
 python-env = { path = "crates/python-env" }
 python-tool = { path = "crates/python-tool" }
 remote = { path = "crates/remote" }

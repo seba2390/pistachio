@@ -128,7 +128,7 @@ impl<'a> Tools<'a> {
     /// uv, kept away from the user's own uv, Pythons and settings.
     fn uv(&self) -> Command {
         let tools = &self.dir;
-        let mut command = Command::new(tools.join("uv"));
+        let mut command = platform::command(tools.join("uv"));
         command
             .env_clear()
             .envs(crate::network_env())

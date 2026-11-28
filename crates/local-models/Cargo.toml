@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 flate2 = "1"
+platform.workspace = true
 python-env.workspace = true
 serde.workspace = true
 serde_json.workspace = true

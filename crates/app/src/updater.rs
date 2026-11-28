@@ -591,7 +591,7 @@ fn install_windows(
     progress(Step::Installing("Installing…"));
     let dir = archive.parent().ok_or("no download folder")?;
     // tar.exe has come with Windows since 10 (1803) and reads zip files.
-    let mut untar = Command::new("tar");
+    let mut untar = ::platform::command("tar");
     untar.arg("-xf").arg(&archive).arg("-C").arg(dir);
     run(untar, Duration::from_secs(300)).map_err(|error| format!("Unpacking: {error}"))?;
     let unpacked = dir.join(&folder);

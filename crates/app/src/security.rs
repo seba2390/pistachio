@@ -479,7 +479,7 @@ fn helper<T: serde::de::DeserializeOwned>(
     command: &str,
 ) -> Result<T, String> {
     let exe = exe.ok_or("the app's own executable could not be found")?;
-    let output = std::process::Command::new(exe)
+    let output = ::platform::command(exe)
         .args([sandbox::cli::FLAG, command])
         .env(sandbox::DIR_ENV, dir)
         .stdin(std::process::Stdio::null())
