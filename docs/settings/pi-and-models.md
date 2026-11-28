@@ -16,7 +16,9 @@ Which pi Pistachio runs, the model new sessions start with, and the models you h
 
 pi program
 : The `pi` to run. Leave it empty to find pi on your `PATH`. The page shows the version it
-  found. Used by new sessions. If `PISTACHIO_PI_BIN` is set, it takes precedence.
+  found. Used by new sessions. If `PISTACHIO_PI_BIN` is set, it takes precedence. When pi is not
+  on the `PATH`, Pistachio fills this in with the one it finds, installs or is shown at startup
+  (see [Finding pi](../general.md#finding-pi)).
 
 ## Startup model
 
@@ -81,7 +83,9 @@ Locally hosted model
   **Deploy new model** suggests models for this computer. **Scan local hardware** looks at the
   processor, the memory, the graphics, the free disk and the build tools, with a progress bar
   that says what it is looking at, and lists what it found; nothing leaves the computer.
-  **Suggest models** then offers up to three: **Fast**, **Balanced** and **Most capable**, each faster and less capable than the next. Each starts collapsed
+  **Suggest models** then offers up to four: **Tiny**, the most capable small model (3B
+  parameters or fewer, in its lightest build) that nearly any computer runs, then **Fast**,
+  **Balanced** and **Most capable**, each faster and less capable than the next. Each starts collapsed
   to its name and its **Download and run** button; the arrow along its bottom opens it. Opened,
   it says why it fits, its context, whether it takes images and whether it thinks (with the
   thinking levels pi offers for it), and shows the
@@ -98,12 +102,12 @@ Locally hosted model
   nothing is downloaded. Everything is pinned to a version and
   ```{image} /_static/screenshots/models-deploy-light.webp
   :class: shot only-light
-  :alt: The hardware this device has and the three models suggested for it
+  :alt: The hardware this device has and the four models suggested for it
   ```
 
   ```{image} /_static/screenshots/models-deploy-dark.webp
   :class: shot only-dark
-  :alt: The hardware this device has and the three models suggested for it
+  :alt: The hardware this device has and the four models suggested for it
   ```
 
   ```{image} /_static/screenshots/models-suggestion-light.webp

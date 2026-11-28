@@ -230,8 +230,9 @@ Everything Pistachio does, in detail. For installation see the [README](../READM
   (OpenAI's, Anthropic's or Gemini's) is found out. On this device (pi running here) it asks
   first whether to **attach to an existing model** (the servers above) or **deploy a new model**:
   **Scan local hardware** lists the processor, memory, graphics, free disk and build tools it
-  found, and **Suggest models** then offers up to three for them (**Fast**, **Balanced**, **Most
-  capable**), each showing its inference engine, checkpoint and quantization, memory and speed
+  found, and **Suggest models** then offers up to four for them (**Tiny**, the most capable model of
+  at most 3B parameters in its lightest build, then **Fast**, **Balanced**, **Most capable**),
+  each showing its inference engine, checkpoint and quantization, memory and speed
   here: a default engine that installs unattended and,
   where faster, a specialized engine built on the computer. Download asks first and lists exactly
   what is downloaded, then shows its progress with Cancel; everything is pinned and checked, runs for this computer only, starts when a
@@ -300,6 +301,18 @@ Everything Pistachio does, in detail. For installation see the [README](../READM
   (the height is remembered).
 - macOS and Linux (Wayland and X11), plus an experimental Windows build. GPU-rendered with [GPUI](https://gpui.rs) via
   [gpui-kit](https://gpui-kit.com).
+- Windows: an installer (`Pistachio-…-windows-x86_64-setup.exe`: per user, no administrator
+  rights, Start menu entry, optional desktop shortcut, uninstaller in Settings → Apps), the
+  Pistachio icon on the program and in the taskbar, minimize / maximize / close at the right of
+  the top bar (also on Linux when the app draws its own window frame), and no console windows
+  for the programs it starts (pi, git, model servers). The hardware scan reads Windows' own
+  APIs: memory, processor, free disk and any graphics card with memory of its own.
+- **Finding pi** at startup: the configured program or `pi` on the `PATH`, else where npm,
+  Node.js version managers (nvm, fnm, Volta, asdf, mise, n, nvm-windows, Scoop) and pnpm, Bun,
+  Yarn or Homebrew put it, which then becomes the pi program. When there is none, a card offers
+  **Install pi** (into `~/.pistachio/server`, with Node.js if needed, no administrator rights; on
+  macOS, Linux and Windows) and **Find pi…** (choose the program or its folder; it is checked
+  before it is used).
 
 ## Sandbox
 
@@ -576,7 +589,8 @@ Settings) it asks GitHub for the latest release. If there is a newer one, a prom
 of the window shows what's new. **Update** installs it the way Pistachio was installed and opens
 the new version: `brew upgrade --cask pistachio` for a Homebrew install on macOS (otherwise the
 new app replaces the old one), the .deb or .rpm on Linux (the system asks for your password) or
-the binary the tarball installed, and `pistachio.exe` on Windows. The download is checked against
+the binary the tarball installed, and `pistachio.exe` on Windows (also when the installer put it
+there). The download is checked against
 GitHub's checksum; if anything fails, the old version stays and the prompt says what happened.
 A progress bar shows how much is downloaded, also when Homebrew downloads it.
 **Download instead** opens the download in your browser, and a version can be skipped. Nothing is

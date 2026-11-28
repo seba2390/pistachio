@@ -8,6 +8,20 @@ All notable changes to PI-gui are listed here. The format follows
 
 ### Added
 
+- **A Windows installer.** `Pistachio-…-windows-x86_64-setup.exe` installs Pistachio for your
+  user (no administrator rights) into `%LOCALAPPDATA%\Programs\Pistachio`, with the Pistachio
+  logo throughout, a Start menu entry, an optional desktop shortcut, **Launch Pistachio** at the
+  end and an uninstaller in Settings → Apps. The zip is still there, to run without installing.
+- **Pistachio finds pi, or installs it.** At startup it looks for pi: on the `PATH` (also the
+  login shell's), then where npm, nvm, fnm, Volta, asdf, mise, n, nvm-windows, Scoop, pnpm, Bun,
+  Yarn and Homebrew put it, and uses what it finds. When pi is nowhere, a card offers **Install
+  pi**, which installs it unattended, with its own Node.js if needed and without administrator
+  rights, into `~/.pistachio/server` on macOS, Linux and Windows, and **Find pi…**, to choose the
+  program (or its folder), which is checked before it is used.
+- **A fourth suggested model: Tiny.** Deploy new model now suggests Tiny, Fast, Balanced and Most
+  capable. Tiny is the most capable model of at most 3B parameters, in its lightest build, so
+  there is always one that nearly any computer runs. The catalog adds MiniCPM5-2B (ahead of
+  Qwen3.5-4B on tool calling, 1.6 GB) and MiniCPM5-1B (0.7 GB).
 - **Downloads wait for the internet.** Where Pistachio downloads something (a suggested local
   model, a document parser, a speech-to-text or naming model, SearXNG, an update), it first checks
   that the internet can be reached. When it can't, the download button shows a crossed-out Wi-Fi
@@ -18,9 +32,19 @@ All notable changes to PI-gui are listed here. The format follows
 ### Changed
 
 - The names of the suggested models are centered on their cards.
+- Windows: `pistachio.exe` has the Pistachio icon (in Explorer, the taskbar and the window) and
+  says what it is in Task Manager.
 
 ### Fixed
 
+- Windows: the window had no minimize, maximize and close buttons. They are at the right of the
+  top bar (also on Linux when the app draws its own window frame).
+- Windows: scanning the hardware, downloading and running a model, and other work opened
+  console (PowerShell) windows. Programs Pistachio starts now run without a window.
+- Windows: the hardware scan often found no processor or memory (PowerShell took too long to
+  start), and never the free disk or a graphics card other than NVIDIA's. It now asks Windows
+  itself: memory, processor, free disk and any graphics card with memory of its own (AMD and Intel
+  too).
 - The hardware scan's bar now fills from empty over two seconds (longer if the scan takes longer)
   and its loader turns, also when the system asks for reduced motion; before, it showed full at
   once.

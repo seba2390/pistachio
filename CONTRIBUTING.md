@@ -122,6 +122,11 @@ Release → Run workflow).
   end of the log. The log, the samples and cargo's timings report (`cargo-timing.html`) are in the
   job's `build-log-<platform>` artifact, also when the build failed or ran out of time. A build
   stops after 60 minutes (a normal one takes 15–25), so one that stalls fails with its logs.
+- **The Windows installer.** The Windows build also compiles `packaging/windows/pistachio.iss`
+  with Inno Setup into `Pistachio-<tag>-windows-x86_64-setup.exe`, then installs it silently,
+  checks the program, its version information and the Start menu entry, and uninstalls it. The
+  zip stays: the in-app updater uses it. Running the Release workflow by hand on a branch
+  (Actions → Release → Run workflow) builds everything without publishing.
 - If a release build fails, read its summary and artifact first; run it again only once the
   cause is known.
 
@@ -133,7 +138,7 @@ script/shot.sh <folder> out.png terminal,diff   # relaunch the debug app and scr
 script/measure-memory.sh                 # memory of a running instance and its pi children
 script/perf.sh [release|debug] [runs] [baseline.json]   # time startup, navigation and quitting
 script/check-linux-displays.sh <app> <folder>  # that the app opens on X11 and on Wayland (Linux)
-script/make-icon.sh                      # regenerate the .icns / PNG from icon.svg
+script/make-icon.sh                      # regenerate the .icns / PNG / Windows .ico from icon.svg
 script/set-version.sh 0.5.0              # bump the version (Cargo.toml, Cargo.lock, README install links)
 script/update-searxng.sh                 # move the pins of the SearXNG the app can download
 script/update-parsers.sh                 # move the pins of the document parsers the app can download
@@ -222,6 +227,11 @@ the model back, revisions, a model that does not answer, Esc and more.
 something; any `<model>/<build>/<engine>` that runs on the computer works.
 `cargo test -p local-models typical_computers -- --ignored --nocapture` prints what typical
 computers would be offered, to look over after moving the catalog.
+
+`cargo test -p pi-install installs_into_a_scratch_home -- --ignored --nocapture` really installs
+Node.js and pi the way **Install pi** does, into `~/.pistachio/server` of whatever `HOME` the test
+binary runs with (run it with a scratch `HOME` to leave yours alone; on Windows it is the user's
+folder).
 
 `cargo test -p documents --test live -- --ignored --test-threads 1` really downloads the document
 parsers (2 GB, into a temporary folder) and reads a PDF with each; add `pymupdf4llm`, `docling` or

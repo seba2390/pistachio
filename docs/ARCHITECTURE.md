@@ -24,7 +24,12 @@ crates/
                 checking one at an address
   python-env/   what both download with: uv, a private Python and locked packages
   local-models/ models suggested for this computer: hardware scan, the pinned catalog (from
-                local-llm-radar), suggestions, downloading engines and models, running them
+                local-llm-radar), suggestions (tiny, fast, balanced, most capable), downloading
+                engines and models, running them
+  pi-install/   pi on this computer: finding it (PATH, npm and Node.js version managers' folders),
+                checking it, installing it into ~/.pistachio/server (with Node.js if needed)
+  platform/     the OS: child processes without console windows on Windows (`no_window()`, for
+                every program the app starts there) and Windows' own hardware APIs
   app/          the GPUI application (binary `pistachio`)
 ```
 

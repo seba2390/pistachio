@@ -16,7 +16,7 @@ turn more on in [Settings → Tools](settings/tools.md).
 - **Chat and Code.** Plain chats that can't touch your files, or the agent working in a project
   folder, with a terminal, git changes and a file tree beside it.
 - **Local models in one click.** Pistachio scans your computer's hardware and suggests models
-  that run well on it (Fast, Balanced, Most capable), each with the inference engine that runs it
+  that run well on it (Tiny, Fast, Balanced, Most capable), each with the inference engine that runs it
   best there. One click downloads, verifies and runs it, ready for your chats.
 - **SSH remotes.** Run pi on another machine. Pistachio installs pi there if needed, and your
   models work there with the keys kept on your computer.
@@ -37,6 +37,9 @@ turn more on in [Settings → Tools](settings/tools.md).
 ```bash
 npm i -g @earendil-works/pi-coding-agent
 ```
+
+Or skip this step: when Pistachio doesn't find pi, it offers **Install pi** (see
+[Finding pi](general.md#finding-pi)).
 
 **2. Install Pistachio.**
 
@@ -70,8 +73,11 @@ Linux (x86_64 and ARM64)
   commands for each.
 
 Windows (x86_64, experimental)
-: Download `pistachio-…-windows-x86_64.zip` from the
-  [latest release](https://github.com/seba2390/pistachio/releases/latest), unzip it and run
+: Download `Pistachio-…-windows-x86_64-setup.exe` from the
+  [latest release](https://github.com/seba2390/pistachio/releases/latest) and run it. It
+  installs for your user (no administrator rights) into `%LOCALAPPDATA%\Programs\Pistachio`,
+  adds Pistachio to the Start menu (and, if you like, the desktop) and uninstalls from Settings →
+  Apps. To run it without installing, unzip `pistachio-…-windows-x86_64.zip` and run
   `pistachio.exe`. Windows may warn about an unknown publisher the first time
   (More info → Run anyway). SSH remotes are untested on Windows, and there is no sandbox yet.
 
@@ -83,7 +89,8 @@ From source
   cargo install --locked --git https://github.com/seba2390/pistachio pistachio
   ```
 
-Then launch **Pistachio** (or run `pistachio`). If pi isn't on your `PATH`, set it in
+Then launch **Pistachio** (or run `pistachio`). It looks for pi and, if it finds none, offers to
+install it or to find it ([Finding pi](general.md#finding-pi)). You can also set it in
 [Settings → pi & models](settings/pi-and-models.md), or start the app with
 `PISTACHIO_PI_BIN=/path/to/pi`.
 

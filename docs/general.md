@@ -228,13 +228,28 @@ Background chats
 Updates
 : **Check for updates when Pistachio opens**, and **Check now**.
 
+## Finding pi
+
+When Pistachio opens, it checks that it can start pi: the program set in
+[Settings → pi & models](settings/pi-and-models.md), or `pi` on your `PATH` (the login shell's
+too). If pi is elsewhere, in Pistachio's own install or where npm, nvm, fnm, Volta, asdf, mise,
+n, nvm-windows, Scoop, pnpm, Bun, Yarn or Homebrew put it, Pistachio uses that one and sets it as
+the pi program. If pi is nowhere, a card says so:
+
+- **Install pi** installs it from npm into `~/.pistachio/server` (`%USERPROFILE%\.pistachio\server`
+  on Windows), with Node.js 22 from nodejs.org (checked against its checksum) when the computer
+  has no recent one. No administrator rights are needed, nothing outside that folder changes, and
+  deleting the folder undoes it. It shows each step; if it fails, it says why.
+- **Find pi…** asks for the `pi` program (or the folder it is in), checks that it runs and uses it.
+- **Not now** closes the card; sessions can't start until pi is found.
+
 ## Updates
 
 When Pistachio opens, it asks GitHub for the latest release (no personal data is sent). If
 there is a newer one, a prompt shows what's new:
 
 - **Update** installs it the way Pistachio was installed (Homebrew, the app bundle, the
-  `.deb` or `.rpm`, or the tarball's binary), checked against GitHub's checksum, and opens the
+  `.deb` or `.rpm`, the tarball's binary, or `pistachio.exe` on Windows), checked against GitHub's checksum, and opens the
   new version. If anything fails, the old version stays.
 - **Download instead** opens the download in your browser. A version can also be skipped.
 
