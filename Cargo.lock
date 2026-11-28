@@ -2068,7 +2068,7 @@ checksum = "7eed2c4702fa172d1ce21078faa7c5203e69f5394d48cc436d25928394a867a2"
 
 [[package]]
 name = "deepsearch"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "documents",
  "html5ever 0.40.1",
@@ -2268,7 +2268,7 @@ dependencies = [
 
 [[package]]
 name = "documents"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "calamine",
  "chardetng",
@@ -5519,7 +5519,7 @@ checksum = "4744e383959f0db86ede514b809b1c53251889093803c05267acc7d4e7030d70"
 
 [[package]]
 name = "local-models"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "flate2",
  "platform",
@@ -7274,7 +7274,7 @@ dependencies = [
 
 [[package]]
 name = "pi-config"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "pretty_assertions",
  "serde_json",
@@ -7283,7 +7283,7 @@ dependencies = [
 
 [[package]]
 name = "pi-install"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "dirs 7.0.0",
  "log",
@@ -7296,7 +7296,7 @@ dependencies = [
 
 [[package]]
 name = "pi-rpc"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-channel",
  "futures",
@@ -7311,7 +7311,7 @@ dependencies = [
 
 [[package]]
 name = "pi-sessions"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "dirs 7.0.0",
  "fastrand",
@@ -7377,7 +7377,7 @@ dependencies = [
 
 [[package]]
 name = "pistachio"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -7436,7 +7436,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "platform"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "windows 0.62.2",
 ]
@@ -7817,7 +7817,7 @@ dependencies = [
 
 [[package]]
 name = "python-env"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "flate2",
  "platform",
@@ -7830,7 +7830,7 @@ dependencies = [
 
 [[package]]
 name = "python-tool"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "monty",
  "monty-types",
@@ -8338,7 +8338,7 @@ checksum = "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
 
 [[package]]
 name = "remote"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-channel",
  "dirs 7.0.0",
@@ -8844,7 +8844,7 @@ dependencies = [
 
 [[package]]
 name = "sandbox"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "landlock",
  "pretty_assertions",
@@ -8932,7 +8932,7 @@ checksum = "1c107b6f4780854c8b126e228ea8869f4d7b71260f962fefb57b996b8959ba6b"
 
 [[package]]
 name = "searxng"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "platform",
  "pretty_assertions",
@@ -9789,7 +9789,7 @@ dependencies = [
 
 [[package]]
 name = "term"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "alacritty_terminal",
  "async-channel",
@@ -9953,7 +9953,7 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "titles"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "candle-core",
@@ -10200,7 +10200,7 @@ dependencies = [
 
 [[package]]
 name = "transcript"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "insta",
  "pi-rpc",
@@ -12099,7 +12099,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "workspace"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "ignore",
  "log",

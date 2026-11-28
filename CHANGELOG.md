@@ -6,6 +6,8 @@ All notable changes to PI-gui are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-28
+
 ### Added
 
 - **A Windows installer.** `Pistachio-…-windows-x86_64-setup.exe` installs Pistachio for your
@@ -902,7 +904,8 @@ chats, skills and model management. Changes since the last private build:
 - A corrupt `hosts.json` is kept as a backup.
 - A remembered terminal height can no longer squeeze out the chat.
 
-[Unreleased]: https://github.com/seba2390/pistachio/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/seba2390/pistachio/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/seba2390/pistachio/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/seba2390/pistachio/compare/v0.5.10...v0.6.0
 [0.5.10]: https://github.com/seba2390/pistachio/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/seba2390/pistachio/compare/v0.5.8...v0.5.9

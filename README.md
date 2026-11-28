@@ -93,20 +93,20 @@ Or skip this step: when Pistachio doesn't find pi, it offers **Install pi**, whi
   - Debian, Ubuntu:
 
     ```bash
-    curl -fLO https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio_0.6.0-1_$(dpkg --print-architecture).deb && sudo apt install ./pistachio_0.6.0-1_$(dpkg --print-architecture).deb
+    curl -fLO https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio_0.6.1-1_$(dpkg --print-architecture).deb && sudo apt install ./pistachio_0.6.1-1_$(dpkg --print-architecture).deb
     ```
 
   - Fedora and other RPM-based systems:
 
     ```bash
-    sudo dnf install https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio-0.6.0-1.$(uname -m).rpm
+    sudo dnf install https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio-0.6.1-1.$(uname -m).rpm
     ```
 
   - Any other distribution (installs for your user only, no root, and adds "Pistachio" to your
     app launcher):
 
     ```bash
-    curl -fL https://github.com/seba2390/pistachio/releases/download/v0.6.0/pistachio-v0.6.0-linux-$(uname -m).tar.gz | tar xz && pistachio-v0.6.0-linux-$(uname -m)/install.sh
+    curl -fL https://github.com/seba2390/pistachio/releases/download/v0.6.1/pistachio-v0.6.1-linux-$(uname -m).tar.gz | tar xz && pistachio-v0.6.1-linux-$(uname -m)/install.sh
     ```
 
   Or download the files yourself from [Releases](https://github.com/seba2390/pistachio/releases).
