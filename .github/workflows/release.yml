@@ -277,9 +277,11 @@ jobs:
           $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' |
             Select-Object -First 1).Matches[0].Groups[1].Value
           $name = "Pistachio-$env:GITHUB_REF_NAME-windows-x86_64-setup"
-          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\$env:PACKAGE_DIR" "/O$PWD\dist" "/F$name" packaging\windows\pistachio.iss
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$PWD\$env:PACKAGE_DIR" "/O$PWD" "/F$name" packaging\windows\pistachio.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
-          "SETUP=dist/$name.exe" >> $env:GITHUB_ENV
+          # Next to the zip: an artifact keeps its files' folders, and publishing takes only the
+          # files at the top of each.
+          "SETUP=$name.exe" >> $env:GITHUB_ENV
       - name: Check the installer
         shell: pwsh
         run: |
