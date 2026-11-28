@@ -239,7 +239,13 @@ impl MainWindow {
 
     /// The side column: its own top bar (what it is, its name, "show in the main column" and
     /// close) above the chat.
-    pub(super) fn render_side_column(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    /// `controls` is the room to keep free at the right end of its top bar for the window's
+    /// buttons, when it is the rightmost column.
+    pub(super) fn render_side_column(
+        &self,
+        controls: Pixels,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         let chat = self.side_chat()?.clone();
         let session = chat.read(cx).session().read(cx);
         let title = session
@@ -253,7 +259,7 @@ impl MainWindow {
                 .flex_none()
                 .w_full()
                 .pl_4()
-                .pr_2()
+                .pr(px(8.) + controls)
                 .gap_2()
                 .border_b_1()
                 .border_color(theme.border)

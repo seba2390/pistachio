@@ -2935,7 +2935,13 @@ impl MainWindow {
 
     // ---- rendering -----------------------------------------------------------
 
-    fn render_chat_header(&self, cx: &mut Context<Self>) -> impl IntoElement + use<> {
+    /// `controls` is the room to keep free at the right end for the window's buttons, when the
+    /// chat column is the rightmost one.
+    fn render_chat_header(
+        &self,
+        controls: Pixels,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement + use<> {
         let session = self.chat.read(cx).session().read(cx);
         let title = if self.settings.is_some() {
             "Settings".to_owned()
@@ -2977,7 +2983,7 @@ impl MainWindow {
                 .h(TOP_BAR_HEIGHT)
                 .flex_none()
                 .w_full()
-                .pr_2()
+                .pr(px(8.) + controls)
                 .gap_2()
                 .border_b_1()
                 .border_color(theme.border)
@@ -3438,8 +3444,17 @@ impl Focusable for MainWindow {
 }
 
 impl Render for MainWindow {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _timer = crate::perf::render("window");
+        // The window's own buttons (Windows, Linux without server decorations) sit over the
+        // right end of the rightmost column's top bar, which keeps room for them.
+        let controls = crate::ui::window_controls::inset(window);
+        let side_open = self.side_chat().is_some();
+        let (chat_inset, side_inset) = match (self.right_open, side_open) {
+            (true, _) => (px(0.), px(0.)),
+            (false, true) => (px(0.), controls),
+            (false, false) => (controls, px(0.)),
+        };
         let (background, foreground, font_family) = (
             cx.theme().background,
             cx.theme().foreground,
@@ -3458,7 +3473,7 @@ impl Render for MainWindow {
             // Whatever does not fit a narrow column is clipped here, never drawn over the
             // right panel.
             .overflow_hidden()
-            .child(self.render_chat_header(cx))
+            .child(self.render_chat_header(chat_inset, cx))
             .when_some(settings, |this, settings| {
                 let pi_field = settings.read(cx).pi_field();
                 this.child(
@@ -3518,7 +3533,7 @@ impl Render for MainWindow {
                 )
             });
 
-        let side_column = self.render_side_column(cx);
+        let side_column = self.render_side_column(side_inset, cx);
         div()
             .key_context(WINDOW_CONTEXT)
             .on_key_down(cx.listener(Self::update_prompt_key))
@@ -3587,6 +3602,7 @@ impl Render for MainWindow {
                             .child(self.right_panel.clone().cached(full())),
                     ),
             )
+            .children(crate::ui::window_controls::render(window, cx))
             .children(self.render_update_scrim(cx))
             .children(self.render_update_card(cx))
             // Above menus and popovers (deferred at low priorities).

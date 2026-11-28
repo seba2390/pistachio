@@ -331,7 +331,10 @@ impl RightPanel {
         }
     }
 
-    fn render_header(&self, cx: &mut Context<Self>) -> impl IntoElement + use<> {
+    /// The panel is always the rightmost column: its top bar keeps room for the window's
+    /// buttons where the app draws them.
+    fn render_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement + use<> {
+        let controls = crate::ui::window_controls::inset(window);
         let theme = cx.theme();
         let (muted, border) = (theme.muted_foreground, theme.border);
         let colors = palette(cx);
@@ -348,7 +351,7 @@ impl RightPanel {
                 .flex_none()
                 .w_full()
                 .pl_3()
-                .pr_2()
+                .pr(px(8.) + controls)
                 .gap_2()
                 .border_b_1()
                 .border_color(border)
@@ -429,7 +432,7 @@ impl Render for RightPanel {
         };
         v_flex()
             .size_full()
-            .child(self.render_header(cx))
+            .child(self.render_header(window, cx))
             .child(div().flex_1().min_h_0().child(content))
     }
 }
