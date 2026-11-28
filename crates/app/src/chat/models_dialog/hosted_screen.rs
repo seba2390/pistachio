@@ -534,8 +534,8 @@ impl ModelsDialog {
             .into_any_element()
     }
 
-    /// Three models for this computer (fast, balanced, most capable), each with the engine that
-    /// runs it best here and, where one is faster, a specialized engine.
+    /// Four models for this computer (tiny, fast, balanced, most capable), each with the engine
+    /// that runs it best here and, where one is faster, a specialized engine.
     fn render_suggestions(
         &self,
         models: &Entity<LocalModels>,

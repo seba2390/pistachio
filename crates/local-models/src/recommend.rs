@@ -1,4 +1,4 @@
-//! Three suggestions for a computer: fast, balanced and most capable.
+//! Four suggestions for a computer: tiny, fast, balanced and most capable.
 //!
 //! Every way to run a catalog model here is weighed ([`choices`]): an engine that runs on this
 //! platform and loads the build, the memory it takes, and the decoding speed, estimated from the
@@ -6,7 +6,9 @@
 //! weights from the disk, measured. Ways under 5 tokens a second are left out.
 //!
 //! Each tier then takes the most capable model (the catalog's curated rank) that reaches its speed,
-//! a different model per tier. For that model the default is the best engine that installs
+//! a different model per tier. Tiny goes by size instead: the most capable model of at most
+//! [`TINY_PARAMS_B`](crate::catalog::TINY_PARAMS_B) billion parameters, which nearly any computer
+//! runs, picked first so that it is never taken by a faster tier. For that model the default is the best engine that installs
 //! unattended; a specialized engine is offered next to it when it is clearly faster.
 
 use crate::catalog::{Build, Catalog, Effort, Engine, Format, Install, Model, Speed};
@@ -25,16 +27,19 @@ const FASTER: f64 = 1.3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tier {
+    /// A small model (see [`Model::is_tiny`]), whatever the computer.
+    Tiny,
     Fast,
     Balanced,
     Capable,
 }
 
 impl Tier {
-    pub const ALL: [Self; 3] = [Self::Fast, Self::Balanced, Self::Capable];
+    pub const ALL: [Self; 4] = [Self::Tiny, Self::Fast, Self::Balanced, Self::Capable];
 
     pub fn label(self) -> &'static str {
         match self {
+            Self::Tiny => "Tiny",
             Self::Fast => "Fast",
             Self::Balanced => "Balanced",
             Self::Capable => "Most capable",
@@ -44,6 +49,7 @@ impl Tier {
     /// Tokens a second it must reach.
     pub fn min_tps(self) -> f64 {
         match self {
+            Self::Tiny => MIN_TPS,
             Self::Fast => 30.,
             Self::Balanced => 15.,
             Self::Capable => MIN_TPS,
@@ -261,14 +267,34 @@ fn measured(
         .max_by(|a, b| a.ram_gb.unwrap_or(0.).total_cmp(&b.ram_gb.unwrap_or(0.)))
 }
 
-/// Up to three suggestions, fastest tier first; a tier no model reaches is left out.
+/// Up to four suggestions in [`Tier::ALL`]'s order (Tiny, then the fastest first); a tier no
+/// model reaches is left out.
 pub fn suggest(hardware: &Hardware, catalog: &'static Catalog) -> Vec<Suggestion> {
     let all = choices(hardware, catalog);
+    let mut taken: Vec<&str> = Vec::new();
+    // Tiny first: the most capable small model that runs here.
+    let tiny = catalog
+        .models
+        .iter()
+        .filter(|model| model.is_tiny())
+        .filter_map(|model| {
+            let ways: Vec<&Choice> = all
+                .iter()
+                .filter(|c| c.model.id == model.id && c.tps >= Tier::Tiny.min_tps())
+                .collect();
+            let shown = pick_for(Tier::Tiny, &ways, Effort::Easy)
+                .or_else(|| pick_for(Tier::Tiny, &ways, Effort::Involved))?;
+            Some((model, shown.tps))
+        })
+        .max_by(|(a, a_tps), (b, b_tps)| a.quality.cmp(&b.quality).then(a_tps.total_cmp(b_tps)))
+        .map(|(model, _)| {
+            taken.push(&model.id);
+            suggestion(Tier::Tiny, model, &all, Tier::Tiny.min_tps())
+        });
     let mut picks = Vec::new();
     // The most capable model first; each faster tier then takes the most capable model that is
     // clearly faster than the tier before. So speed rises and capability falls from tier to tier.
     let mut slowest: Option<f64> = None;
-    let mut taken: Vec<&str> = Vec::new();
     for tier in [Tier::Capable, Tier::Balanced, Tier::Fast] {
         let floor = slowest.map_or(0., |tps| tps * FASTER).max(tier.min_tps());
         let ways = |model: &Model| -> Vec<&Choice> {
@@ -293,25 +319,35 @@ pub fn suggest(hardware: &Hardware, catalog: &'static Catalog) -> Vec<Suggestion
         };
         slowest = Some(tps);
         taken.push(&model.id);
-        let fits = ways(model);
-        // A default is always offered when an unattended engine runs the model at all, even
-        // when only the specialized one reaches the tier's speed.
-        let any: Vec<&Choice> = all.iter().filter(|c| c.model.id == model.id).collect();
-        let default = pick(&fits, Effort::Easy).or_else(|| pick(&any, Effort::Easy));
-        let specialized = pick(&fits, Effort::Involved).filter(|special| {
-            default
-                .as_ref()
-                .is_none_or(|default| special.tps >= default.tps * SPECIALIZED_GAIN)
-        });
-        picks.push(Suggestion {
-            tier,
-            model,
-            default,
-            specialized,
-        });
+        picks.push(suggestion(tier, model, &all, floor));
     }
+    picks.extend(tiny);
     picks.reverse();
     picks
+}
+
+/// `model` for `tier`: the ways that reach `floor` tokens a second.
+fn suggestion(tier: Tier, model: &'static Model, all: &[Choice], floor: f64) -> Suggestion {
+    let fits: Vec<&Choice> = all
+        .iter()
+        .filter(|c| c.model.id == model.id && c.tps >= floor)
+        .collect();
+    // A default is always offered when an unattended engine runs the model at all, even
+    // when only the specialized one reaches the tier's speed.
+    let any: Vec<&Choice> = all.iter().filter(|c| c.model.id == model.id).collect();
+    let default =
+        pick_for(tier, &fits, Effort::Easy).or_else(|| pick_for(tier, &any, Effort::Easy));
+    let specialized = pick_for(tier, &fits, Effort::Involved).filter(|special| {
+        default
+            .as_ref()
+            .is_none_or(|default| special.tps >= default.tps * SPECIALIZED_GAIN)
+    });
+    Suggestion {
+        tier,
+        model,
+        default,
+        specialized,
+    }
 }
 
 /// The best way with engines of `effort`: the most precise build (the largest), the faster
@@ -323,6 +359,23 @@ fn pick(ways: &[&Choice], effort: Effort) -> Option<Choice> {
             a.build
                 .size
                 .cmp(&b.build.size)
+                .then(a.tps.total_cmp(&b.tps))
+        })
+        .map(|c| (*c).clone())
+}
+
+/// For [`Tier::Tiny`], whose point is to be light: the smallest build, the faster engine on a
+/// tie. Other tiers [`pick`].
+fn pick_for(tier: Tier, ways: &[&Choice], effort: Effort) -> Option<Choice> {
+    if tier != Tier::Tiny {
+        return pick(ways, effort);
+    }
+    ways.iter()
+        .filter(|c| c.engine.effort == effort)
+        .max_by(|a, b| {
+            b.build
+                .size
+                .cmp(&a.build.size)
                 .then(a.tps.total_cmp(&b.tps))
         })
         .map(|c| (*c).clone())
@@ -387,10 +440,10 @@ mod tests {
     }
 
     #[test]
-    fn suggests_three_on_a_mid_range_mac() {
+    fn suggests_four_on_a_mid_range_mac() {
         let suggestions = suggest(&mac(3, AppleTier::Pro, 18, (26, 0)), catalog());
         check(&suggestions);
-        assert_eq!(suggestions.len(), 3);
+        assert_eq!(suggestions.len(), 4);
         let tiers: Vec<_> = suggestions.iter().map(|s| s.tier).collect();
         assert_eq!(tiers, Tier::ALL);
         // On a Mac, the default for MLX builds is not llama.cpp.
@@ -498,6 +551,41 @@ mod tests {
             32,
         ));
         print(&pc(None, 16));
+    }
+
+    #[test]
+    fn tiny_is_a_small_model_on_any_computer() {
+        let computers = [
+            mac(2, AppleTier::Base, 8, (15, 0)),
+            mac(4, AppleTier::Max, 64, (26, 4)),
+            pc(None, 8),
+            pc(None, 16),
+        ];
+        for hardware in &computers {
+            let suggestions = suggest(hardware, catalog());
+            check(&suggestions);
+            let first = suggestions.first().expect("something runs");
+            assert_eq!(first.tier, Tier::Tiny, "{}", hardware.summary());
+            assert!(first.model.is_tiny(), "{}", first.model.id);
+            // The best small model that runs, so the same on every computer here.
+            let best_tiny = catalog()
+                .models
+                .iter()
+                .filter(|model| model.is_tiny())
+                .max_by_key(|model| model.quality)
+                .unwrap();
+            assert_eq!(first.model.id, best_tiny.id);
+            assert!(suggestions[1..].iter().all(|s| s.tier != Tier::Tiny));
+            // Light: the smallest build of it that runs here.
+            let default = first.default.as_ref().unwrap();
+            let smallest = choices(hardware, catalog())
+                .iter()
+                .filter(|c| c.model.id == first.model.id && c.is_easy())
+                .map(|c| c.build.size)
+                .min()
+                .unwrap();
+            assert_eq!(default.build.size, smallest, "{}", default.build.id);
+        }
     }
 
     #[test]
