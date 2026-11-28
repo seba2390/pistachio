@@ -7282,6 +7282,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pi-install"
+version = "0.6.0"
+dependencies = [
+ "dirs 7.0.0",
+ "log",
+ "platform",
+ "pretty_assertions",
+ "remote",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
 name = "pi-rpc"
 version = "0.6.0"
 dependencies = [
@@ -7384,6 +7397,7 @@ dependencies = [
  "log",
  "markdown",
  "pi-config",
+ "pi-install",
  "pi-rpc",
  "pi-sessions",
  "platform",

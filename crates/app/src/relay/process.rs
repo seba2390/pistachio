@@ -160,7 +160,6 @@ fn start(launch: &Launch) -> Result<(Running, Vec<Value>), String> {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(log);
-    remote::no_console(&mut command);
     let mut child = command.spawn().map_err(fail)?;
     let stdin = child.stdin.take();
     let stdout = child.stdout.take();

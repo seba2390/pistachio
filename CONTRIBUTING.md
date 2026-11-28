@@ -158,7 +158,7 @@ checks scriptable:
   searching for `<text>`; `attach:<path>` attaches a file and `send:<text>` sends `<text>` as a
   message, once what is attached is read; `image-viewer:<n>` opens the picture viewer on the session's
   `<n>`th picture; `side-chat` opens a side chat of it 2 s after start; `report-check` opens how the session's last deep search report was checked.
-- Dialogs: `add-host`, `manage-hosts`, `models`, `models-provider:<id>`, `models-server:<address>`,
+- Dialogs: `add-host`, `manage-hosts`, `pi-missing` (the card that installs or finds pi), `models`, `models-provider:<id>`, `models-server:<address>`,
   `edit-models`.
 - Skills page: `skills`, `new-skill`, `open-skill:<path>`; the Settings page: `settings`
   (`settings-web`, `settings-speech`, `settings-names`, `settings-documents`, `settings-security` and `settings-tools` open those pages, `settings-git` its Git and GitHub section, `settings-at:<page>:<section>` any page scrolled to a section, 0 being General, as for the documentation's screenshots; after `settings-web`,

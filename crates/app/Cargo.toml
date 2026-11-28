@@ -21,6 +21,7 @@ documents.workspace = true
 local-models.workspace = true
 sandbox.workspace = true
 pi-config.workspace = true
+pi-install.workspace = true
 pi-rpc.workspace = true
 pi-sessions.workspace = true
 python-env.workspace = true

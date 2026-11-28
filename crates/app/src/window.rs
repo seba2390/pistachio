@@ -43,6 +43,7 @@ use crate::ui_state::{LastSession, UiState};
 use remote::HostId;
 
 mod drafts;
+mod pi_setup;
 mod side;
 #[cfg(test)]
 mod tests;
@@ -359,6 +360,7 @@ impl MainWindow {
                 this.open_panels(&open_at_startup, window, cx);
                 if !scripted {
                     this.show_whats_new_if_updated(window, cx);
+                    this.look_for_pi(window, cx);
                     cx.background_executor()
                         .spawn(async { crate::updater::clean_up() })
                         .detach();
@@ -498,6 +500,7 @@ impl MainWindow {
                     })
                     .detach(),
                 "add-host" => self.open_add_host(window, cx),
+                "pi-missing" => self.show_pi_missing(window, cx),
                 "manage-hosts" => self.open_manage_hosts(window, cx),
                 "skills" => self.toggle_skills(window, cx),
                 "settings" => self.open_settings(&OpenSettings, window, cx),
